@@ -55,11 +55,14 @@ function createIterableMethod(
       )
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
+    // 返回一个包装后的迭代器，该迭代器返回从真实迭代器发出的值的观察版本
     return extend(
       // inheriting all iterator properties
+      // 继承所有迭代器属性
       Object.create(innerIterator),
       {
         // iterator protocol
+        // 迭代器协议
         next() {
           const { value, done } = innerIterator.next()
           return done
@@ -101,6 +104,7 @@ function createInstrumentations(
     get(this: MapTypes, key: unknown) {
       // #1772: readonly(reactive(Map)) should return readonly + reactive version
       // of the value
+      // #1772: readonly(reactive(Map)) 应该返回值的 readonly + reactive 版本
       const target = this[ReactiveFlags.RAW]
       const rawTarget = toRaw(target)
       const rawKey = toRaw(key)
@@ -119,6 +123,8 @@ function createInstrumentations(
       } else if (target !== rawTarget) {
         // #3602 readonly(reactive(Map))
         // ensure that the nested reactive `Map` can do tracking for itself
+        // #3602 readonly(reactive(Map))
+        // 确保嵌套的响应式 `Map` 可以自行进行追踪
         target.get(key)
       }
     },
@@ -151,6 +157,9 @@ function createInstrumentations(
         // important: make sure the callback is
         // 1. invoked with the reactive map as `this` and 3rd arg
         // 2. the value received should be a corresponding reactive/readonly.
+        // 重要：确保回调函数：
+        // 1. 以响应式 map 作为 `this` 和第三个参数调用
+        // 2. 接收到的值应该是对应的响应式/只读版本。
         return callback.call(thisArg, wrap(value), wrap(key), observed)
       })
     },
@@ -216,6 +225,7 @@ function createInstrumentations(
 
             const oldValue = get ? get.call(target, key) : undefined
             // forward the operation before queueing reactions
+            // 在排队反应之前转发操作
             const result = target.delete(key)
             if (hadKey) {
               trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
@@ -231,6 +241,7 @@ function createInstrumentations(
                 : new Set(target)
               : undefined
             // forward the operation before queueing reactions
+            // 在排队反应之前转发操作
             const result = target.clear()
             if (hadItems) {
               trigger(

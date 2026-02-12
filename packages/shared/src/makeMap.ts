@@ -6,6 +6,14 @@
  * So that rollup can tree-shake them if necessary.
  */
 
+/**
+ * 根据一串“键”生成一个“判断某个键是否在这串键里”的函数。
+ * @example
+ * const map = makeMap('a,b,c') 
+ * map('a') // true
+ * map('d') // false
+ */
+
 /*@__NO_SIDE_EFFECTS__*/
 export function makeMap(str: string): (key: string) => boolean {
   const map = Object.create(null)

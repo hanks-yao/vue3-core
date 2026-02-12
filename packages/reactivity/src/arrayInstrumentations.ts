@@ -16,6 +16,10 @@ import { isArray } from '@vue/shared'
  * Track array iteration and return:
  * - if input is reactive: a cloned raw array with reactive values
  * - if input is non-reactive or shallowReactive: the original raw array
+ *
+ * 追踪数组迭代并返回：
+ * - 如果输入是响应式的：一个包含响应式值的克隆原始数组
+ * - 如果输入是非响应式或浅层响应式的：原始数组
  */
 export function reactiveReadArray<T>(array: T[]): T[] {
   const raw = toRaw(array)
@@ -26,12 +30,15 @@ export function reactiveReadArray<T>(array: T[]): T[] {
 
 /**
  * Track array iteration and return raw array
+ *
+ * 追踪数组迭代并返回原始数组
  */
 export function shallowReadArray<T>(arr: T[]): T[] {
   track((arr = toRaw(arr)), TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
   return arr
 }
 
+// 将数组元素转换为响应式或只读对象
 function toWrapped(target: unknown, item: unknown) {
   if (isReadonly(target)) {
     return isReactive(target) ? toReadonly(toReactive(item)) : toReadonly(item)
@@ -39,6 +46,7 @@ function toWrapped(target: unknown, item: unknown) {
   return toReactive(item)
 }
 
+// 数组方法的重写集合，用于拦截数组操作
 export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   __proto__: null,
 
@@ -123,6 +131,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   // flat, flatMap could benefit from ARRAY_ITERATE but are not straight-forward to implement
+  // flat, flatMap 可以从 ARRAY_ITERATE 中受益，但实现起来并不简单
 
   forEach(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
@@ -144,6 +153,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   // keys() iterator only reads `length`, no optimization required
+  // keys() 迭代器只读取 `length`，不需要优化
 
   lastIndexOf(...args: unknown[]) {
     return searchProxy(this, 'lastIndexOf', args)
@@ -193,6 +203,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   // slice could use ARRAY_ITERATE but also seems to beg for range tracking
+  // slice 可以使用 ARRAY_ITERATE，但也似乎需要范围追踪
 
   some(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
@@ -230,6 +241,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 }
 
 // instrument iterators to take ARRAY_ITERATE dependency
+// 对迭代器进行插桩，以建立 ARRAY_ITERATE 依赖
 function iterator(
   self: unknown[],
   method: keyof Array<unknown>,
@@ -243,6 +255,14 @@ function iterator(
   // partially iterated in another, then iterated more in yet another.
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
+  //
+  // 注意，这里建立 ARRAY_ITERATE 依赖并不严格等同于在代理数组上调用 iterate。
+  // 创建迭代器不会访问任何数组属性：
+  // 只有当调用 .next() 时，才会访问 length 和索引。
+  // 极端情况下，迭代器可能在一个 effect 作用域中创建，
+  // 在另一个作用域中部分迭代，然后在第三个作用域中继续迭代。
+  // 鉴于 JS 迭代器只能读取一次，这似乎不是一个合理的使用场景，
+  // 所以这种追踪简化似乎是可以接受的。
   const arr = shallowReadArray(self)
   const iter = (arr[method] as any)() as IterableIterator<unknown> & {
     _next: IterableIterator<unknown>['next']
@@ -262,11 +282,13 @@ function iterator(
 
 // in the codebase we enforce es2016, but user code may run in environments
 // higher than that
+// 在代码库中我们强制使用 es2016，但用户代码可能运行在更高版本的环境中
 type ArrayMethods = keyof Array<any> | 'findLast' | 'findLastIndex'
 
 const arrayProto = Array.prototype
 // instrument functions that read (potentially) all items
 // to take ARRAY_ITERATE dependency
+// 对读取（可能）所有项的函数进行插桩，以建立 ARRAY_ITERATE 依赖
 function apply(
   self: unknown[],
   method: ArrayMethods,
@@ -284,6 +306,11 @@ function apply(
   // If the method being called is from a user-extended Array, the arguments will be unknown
   // (unknown order and unknown parameter types). In this case, we skip the shallowReadArray
   // handling and directly call apply with self.
+  //
+  // #11759
+  // 如果调用的方法来自用户扩展的 Array，参数将是未知的
+  // （未知的顺序和未知的参数类型）。在这种情况下，我们跳过 shallowReadArray
+  // 处理，直接使用 self 调用 apply。
   if (methodFn !== arrayProto[method as any]) {
     const result = methodFn.apply(self, args)
     return needsWrap ? toReactive(result) : result
@@ -306,6 +333,7 @@ function apply(
 }
 
 // instrument reduce and reduceRight to take ARRAY_ITERATE dependency
+// 对 reduce 和 reduceRight 进行插桩，以建立 ARRAY_ITERATE 依赖
 function reduce(
   self: unknown[],
   method: keyof Array<any>,
@@ -329,6 +357,7 @@ function reduce(
 }
 
 // instrument identity-sensitive methods to account for reactive proxies
+// 对身份敏感的方法进行插桩，以处理响应式代理
 function searchProxy(
   self: unknown[],
   method: keyof Array<any>,
@@ -337,9 +366,11 @@ function searchProxy(
   const arr = toRaw(self) as any
   track(arr, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
   // we run the method using the original args first (which may be reactive)
+  // 我们首先使用原始参数（可能是响应式的）运行该方法
   const res = arr[method](...args)
 
   // if that didn't work, run it again using raw values.
+  // 如果那不起作用，使用原始值再次运行它。
   if ((res === -1 || res === false) && isProxy(args[0])) {
     args[0] = toRaw(args[0])
     return arr[method](...args)
@@ -350,6 +381,8 @@ function searchProxy(
 
 // instrument length-altering mutation methods to avoid length being tracked
 // which leads to infinite loops in some cases (#2137)
+// 对改变长度的变异方法进行插桩，以避免追踪 length，
+// 这在某些情况下会导致无限循环 (#2137)
 function noTracking(
   self: unknown[],
   method: keyof Array<any>,

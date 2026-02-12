@@ -15,15 +15,26 @@
  *
  * Check the `patchElement` function in '../../runtime-core/src/renderer.ts' to see how the
  * flags are handled during diff.
+ *
+ * （补丁标志是编译器生成的优化提示。在 diff 过程中遇到带有 dynamicChildren 的块时，
+ * 算法会进入「优化模式」。在此模式下，我们知道 vdom 是由编译器生成的渲染函数产生的，
+ * 因此算法只需处理由这些补丁标志显式标记的更新。
+ *
+ * 补丁标志可使用 | 按位或运算符组合，并使用 & 运算符检查，例如：
+ * const flag = TEXT | CLASS; if (flag & TEXT) { ... }
+ *
+ * 查看 '../../runtime-core/src/renderer.ts' 中的 patchElement 函数以了解 diff 时标志的处理方式。）
  */
 export enum PatchFlags {
   /**
    * Indicates an element with dynamic textContent (children fast path)
+   * （表示具有动态 textContent 的元素，即子节点快速路径）
    */
   TEXT = 1,
 
   /**
    * Indicates an element with dynamic class binding.
+   * （表示具有动态 class 绑定的元素。）
    */
   CLASS = 1 << 1,
 
@@ -37,6 +48,9 @@ export enum PatchFlags {
    * const style = { color: 'red' }
    * render() { return e('div', { style }) }
    * ```
+   * （表示具有动态 style 的元素。编译器将静态字符串样式预编译为静态对象，
+   * 并检测并提升内联静态对象。例如 style="color: red" 与 :style="{ color: 'red' }"
+   * 都会被提升为 const style = { color: 'red' }; render() { return e('div', { style }) }。）
    */
   STYLE = 1 << 2,
 
@@ -46,6 +60,9 @@ export enum PatchFlags {
    * class/style). when this flag is present, the vnode also has a dynamicProps
    * array that contains the keys of the props that may change so the runtime
    * can diff them faster (without having to worry about removed props)
+   * （表示具有非 class/style 的动态 props 的元素。也可用于具有任意动态 props（含 class/style）
+   * 的组件。存在此标志时，vnode 还会带有 dynamicProps 数组，包含可能变化的 props 的键，
+   * 以便运行时更快地做 diff（无需关心被移除的 props）。）
    */
   PROPS = 1 << 3,
 
@@ -53,6 +70,8 @@ export enum PatchFlags {
    * Indicates an element with props with dynamic keys. When keys change, a full
    * diff is always needed to remove the old key. This flag is mutually
    * exclusive with CLASS, STYLE and PROPS.
+   * （表示 props 具有动态 key 的元素。当 key 变化时，始终需要完整 diff 以移除旧 key。
+   * 该标志与 CLASS、STYLE、PROPS 互斥。）
    */
   FULL_PROPS = 1 << 4,
 
@@ -60,21 +79,25 @@ export enum PatchFlags {
    * Indicates an element that requires props hydration
    * (but not necessarily patching)
    * e.g. event listeners & v-bind with prop modifier
+   * （表示需要 props 水合的元素（不一定需要打补丁），例如事件监听器与带 .prop 修饰符的 v-bind。）
    */
   NEED_HYDRATION = 1 << 5,
 
   /**
    * Indicates a fragment whose children order doesn't change.
+   * （表示子节点顺序不变的 fragment。）
    */
   STABLE_FRAGMENT = 1 << 6,
 
   /**
    * Indicates a fragment with keyed or partially keyed children
+   * （表示具有带 key 或部分带 key 子节点的 fragment。）
    */
   KEYED_FRAGMENT = 1 << 7,
 
   /**
    * Indicates a fragment with unkeyed children.
+   * （表示具有无 key 子节点的 fragment。）
    */
   UNKEYED_FRAGMENT = 1 << 8,
 
@@ -83,6 +106,8 @@ export enum PatchFlags {
    * directives (onVnodeXXX hooks). since every patched vnode checks for refs
    * and onVnodeXXX hooks, it simply marks the vnode so that a parent block
    * will track it.
+   * （表示仅需非 props 补丁的元素，例如 ref 或指令（onVnodeXXX 钩子）。因为每个被补丁的
+   * vnode 都会检查 refs 和 onVnodeXXX 钩子，故仅标记该 vnode，以便父块会追踪它。）
    */
   NEED_PATCH = 1 << 9,
 
@@ -90,6 +115,7 @@ export enum PatchFlags {
    * Indicates a component with dynamic slots (e.g. slot that references a v-for
    * iterated value, or dynamic slot names).
    * Components with this flag are always force updated.
+   * （表示具有动态插槽的组件，例如引用 v-for 迭代值的插槽或动态插槽名。带此标志的组件总是被强制更新。）
    */
   DYNAMIC_SLOTS = 1 << 10,
 
@@ -97,6 +123,7 @@ export enum PatchFlags {
    * Indicates a fragment that was created only because the user has placed
    * comments at the root level of a template. This is a dev-only flag since
    * comments are stripped in production.
+   * （表示仅因用户在模板根层级放置了注释而产生的 fragment。此为仅开发环境标志，因生产环境会移除注释。）
    */
   DEV_ROOT_FRAGMENT = 1 << 11,
 
@@ -106,11 +133,15 @@ export enum PatchFlags {
    * bitwise operators (bitwise matching should only happen in branches where
    * patchFlag > 0), and are mutually exclusive. When checking for a special
    * flag, simply check patchFlag === FLAG.
+   * （特殊标志 -------------------------------------------------------------
+   * 特殊标志是负整数。它们从不使用按位运算符进行匹配（按位匹配应仅在 patchFlag > 0 的分支中发生），
+   * 并且是互斥的。检查特殊标志时，只需检查 patchFlag === FLAG。）
    */
 
   /**
    * Indicates a cached static vnode. This is also a hint for hydration to skip
    * the entire sub tree since static content never needs to be updated.
+   * （表示缓存的静态 vnode。这也是水合的提示，用于跳过整个子树，因为静态内容永远不需要更新。）
    */
   CACHED = -1,
   /**
@@ -119,12 +150,15 @@ export enum PatchFlags {
    * when encountering non-compiler generated slots (i.e. manually written
    * render functions, which should always be fully diffed)
    * OR manually cloneVNodes
+   * （一个特殊标志，表示 diff 算法应退出优化模式。例如，在 renderSlot() 创建的块片段上，
+   * 当遇到非编译器生成的插槽（即手动编写的渲染函数，应始终完全 diff）或手动 cloneVNodes 时。）
    */
   BAIL = -2,
 }
 
 /**
  * dev only flag -> name mapping
+ * （仅开发环境：标志 -> 名称映射）
  */
 export const PatchFlagNames: Record<PatchFlags, string> = {
   [PatchFlags.TEXT]: `TEXT`,

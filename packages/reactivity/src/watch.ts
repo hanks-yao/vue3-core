@@ -28,6 +28,8 @@ import { getCurrentScope } from './effectScope'
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
 // to @vue/reactivity to allow co-location with the moved base watch logic, hence
 // it is essential to keep these values unchanged.
+// 这些错误代码已从 `packages/runtime-core/src/errorHandling.ts` 转移到 @vue/reactivity，
+// 以便与移动后的基础 watch 逻辑共存，因此保持这些值不变至关重要。
 export enum WatchErrorCodes {
   WATCH_GETTER = 2,
   WATCH_CALLBACK,
@@ -75,6 +77,7 @@ export interface WatchHandle extends WatchStopHandle {
 }
 
 // initial value for watchers to trigger on undefined initial values
+// 侦听器的初始值，用于触发 undefined 的初始值
 const INITIAL_WATCHER_VALUE = {}
 
 export type WatchScheduler = (job: () => void, isFirstRun: boolean) => void
@@ -84,6 +87,7 @@ let activeWatcher: ReactiveEffect | undefined = undefined
 
 /**
  * Returns the current active effect if there is one.
+ * 返回当前活动的副作用（如果有）。
  */
 export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
   return activeWatcher
@@ -93,12 +97,17 @@ export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
  * Registers a cleanup callback on the current active effect. This
  * registered cleanup callback will be invoked right before the
  * associated effect re-runs.
+ * 在当前活动副作用上注册一个清理回调。
+ * 这个注册的清理回调将在相关联的副作用重新运行之前立即被调用。
  *
  * @param cleanupFn - The callback function to attach to the effect's cleanup.
+ * @param cleanupFn - 要附加到副作用清理的回调函数。
  * @param failSilently - if `true`, will not throw warning when called without
  * an active effect.
+ * @param failSilently - 如果为 `true`，则在没有活动副作用的情况下调用时不会抛出警告。
  * @param owner - The effect that this cleanup function should be attached to.
  * By default, the current active effect.
+ * @param owner - 此清理函数应附加到的副作用。默认为当前活动的副作用。
  */
 export function onWatcherCleanup(
   cleanupFn: () => void,
@@ -117,6 +126,7 @@ export function onWatcherCleanup(
   }
 }
 
+// 侦听器的主入口函数
 export function watch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb?: WatchCallback | null,
@@ -135,11 +145,14 @@ export function watch(
 
   const reactiveGetter = (source: object) => {
     // traverse will happen in wrapped getter below
+    // 遍历将在下面的包装 getter 中发生
     if (deep) return source
     // for `deep: false | 0` or shallow reactive, only traverse root-level properties
+    // 对于 `deep: false | 0` 或浅层响应式对象，仅遍历根级属性
     if (isShallow(source) || deep === false || deep === 0)
       return traverse(source, 1)
     // for `deep: undefined` on a reactive object, deeply traverse all properties
+    // 对于响应式对象上的 `deep: undefined`，深度遍历所有属性
     return traverse(source)
   }
 
@@ -150,6 +163,7 @@ export function watch(
   let forceTrigger = false
   let isMultiSource = false
 
+  // 规范化 source，将其转换为 getter 函数
   if (isRef(source)) {
     getter = () => source.value
     forceTrigger = isShallow(source)
@@ -174,11 +188,13 @@ export function watch(
   } else if (isFunction(source)) {
     if (cb) {
       // getter with cb
+      // 带有回调函数的 getter
       getter = call
         ? () => call(source, WatchErrorCodes.WATCH_GETTER)
         : (source as () => any)
     } else {
       // no cb -> simple effect
+      // 没有回调函数 -> 简单的副作用 (watchEffect)
       getter = () => {
         if (cleanup) {
           pauseTracking()
@@ -204,6 +220,7 @@ export function watch(
     __DEV__ && warnInvalidSource(source)
   }
 
+  // 处理深度监听
   if (cb && deep) {
     const baseGetter = getter
     const depth = deep === true ? Infinity : deep
@@ -230,6 +247,7 @@ export function watch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
 
+  // 调度器任务，当依赖发生变化时执行
   const job = (immediateFirstRun?: boolean) => {
     if (
       !(effect.flags & EffectFlags.ACTIVE) ||
@@ -239,6 +257,7 @@ export function watch(
     }
     if (cb) {
       // watch(source, cb)
+      // watch(source, cb) 模式
       const newValue = effect.run()
       if (
         deep ||
@@ -248,6 +267,7 @@ export function watch(
           : hasChanged(newValue, oldValue))
       ) {
         // cleanup before running cb again
+        // 在再次运行回调之前进行清理
         if (cleanup) {
           cleanup()
         }
@@ -257,6 +277,7 @@ export function watch(
           const args = [
             newValue,
             // pass undefined as the old value when it's changed for the first time
+            // 当第一次更改时，传递 undefined 作为旧值
             oldValue === INITIAL_WATCHER_VALUE
               ? undefined
               : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
@@ -275,6 +296,7 @@ export function watch(
       }
     } else {
       // watchEffect
+      // watchEffect 模式
       effect.run()
     }
   }
@@ -283,6 +305,7 @@ export function watch(
     augmentJob(job)
   }
 
+  // 创建响应式副作用，关联 getter 和调度器
   effect = new ReactiveEffect(getter)
 
   effect.scheduler = scheduler
@@ -309,6 +332,7 @@ export function watch(
   }
 
   // initial run
+  // 初始运行
   if (cb) {
     if (immediate) {
       job(true)
@@ -328,6 +352,7 @@ export function watch(
   return watchHandle
 }
 
+// 递归遍历对象以收集依赖
 export function traverse(
   value: unknown,
   depth: number = Infinity,
