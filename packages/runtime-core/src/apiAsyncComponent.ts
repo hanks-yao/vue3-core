@@ -19,6 +19,7 @@ import { markAsyncBoundary } from './helpers/useId'
 import { type HydrationStrategy, forEachElement } from './hydrationStrategies'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
+// es 模块
 
 export type AsyncComponentLoader<T = any> = () => Promise<
   AsyncComponentResolveResult<T>
@@ -47,6 +48,7 @@ export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
+  // 规范化参数，如果传入的是函数，则将其作为 loader 属性
   if (isFunction(source)) {
     source = { loader: source }
   }
@@ -58,6 +60,7 @@ export function defineAsyncComponent<
     delay = 200,
     hydrate: hydrateStrategy,
     timeout, // undefined = never times out
+    // undefined = 永不超时
     suspensible = true,
     onError: userOnError,
   } = source
@@ -75,6 +78,7 @@ export function defineAsyncComponent<
   const load = (): Promise<ConcreteComponent> => {
     let thisRequest: Promise<ConcreteComponent>
     return (
+      // 如果有正在进行的请求，直接返回
       pendingRequest ||
       (thisRequest = pendingRequest =
         loader()
@@ -101,6 +105,7 @@ export function defineAsyncComponent<
               )
             }
             // interop module default
+            // 处理模块默认导出
             if (
               comp &&
               (comp.__esModule || comp[Symbol.toStringTag] === 'Module')
@@ -126,6 +131,7 @@ export function defineAsyncComponent<
       ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
       const performHydrate = () => {
         // skip hydration if the component has been patched
+        // 如果组件已被修补，则跳过水合
         if (patched) {
           if (__DEV__) {
             warn(
@@ -163,6 +169,7 @@ export function defineAsyncComponent<
       markAsyncBoundary(instance)
 
       // already resolved
+      // 已经解析
       if (resolvedComp) {
         return () => createInnerComp(resolvedComp!, instance)
       }
@@ -173,11 +180,12 @@ export function defineAsyncComponent<
           err,
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
-          !errorComponent /* do not throw in dev if user provided error component */,
+          !errorComponent /* 如果用户提供了错误组件，则在开发环境中不抛出错误 */,
         )
       }
 
       // suspense-controlled or SSR.
+      // suspense 控制或 SSR。
       if (
         (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) ||
         (__SSR__ && isInSSRComponentSetup)
@@ -197,6 +205,7 @@ export function defineAsyncComponent<
           })
       }
 
+      // 普通异步组件逻辑（非 Suspense/SSR）
       const loaded = ref(false)
       const error = ref()
       const delayed = ref(!!delay)
@@ -225,6 +234,7 @@ export function defineAsyncComponent<
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
             // name is taken into account
+            // 父组件是 keep-alive，强制更新以便考虑加载组件的名称
             instance.parent.update()
           }
         })
@@ -258,9 +268,11 @@ function createInnerComp(
   const { ref, props, children, ce } = parent.vnode
   const vnode = createVNode(comp, props, children)
   // ensure inner component inherits the async wrapper's ref owner
+  // 确保内部组件继承异步包装器的 ref 所有者
   vnode.ref = ref
   // pass the custom element callback on to the inner comp
   // and remove it from the async wrapper
+  // 将自定义元素回调传递给内部组件，并从异步包装器中移除它
   vnode.ce = ce
   delete parent.vnode.ce
 

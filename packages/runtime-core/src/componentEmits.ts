@@ -97,6 +97,7 @@ export type EmitFn<
   Options extends Array<infer V>
     ? (event: V, ...args: any[]) => void
     : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
+      // 如果 emit 是空对象（通常是 emit 的默认值），应该转换为函数
       ? (event: string, ...args: any[]) => void
       : UnionToIntersection<
           {
@@ -108,6 +109,14 @@ export type EmitFn<
           }[Event]
         >
 
+/**
+ * Trigger an event on the component instance.
+ * 触发组件实例上的事件。
+ *
+ * @param instance - The component instance. 组件实例。
+ * @param event - The event name. 事件名。
+ * @param rawArgs - The arguments to pass to the event handler. 传递给事件处理程序的参数。
+ */
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
@@ -159,6 +168,7 @@ export function emit(
     : isModelListener && getModelModifiers(props, event.slice(7))
 
   // for v-model update:xxx events, apply modifiers on args
+  // 对于 v-model update:xxx 事件，将修饰符应用到参数上
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
@@ -194,9 +204,12 @@ export function emit(
   let handler =
     props[(handlerName = toHandlerKey(event))] ||
     // also try camelCase event handler (#2249)
+    // 同时也尝试 camelCase 事件处理程序 (#2249)
     props[(handlerName = toHandlerKey(camelize(event)))]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
+  // 对于 v-model update:xxx 事件，也触发 kebab-case 等效项
+  // 用于通过 kebab-case 传递的 props
   if (!handler && isModelListener) {
     handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
   }
@@ -233,6 +246,15 @@ export function emit(
 }
 
 const mixinEmitsCache = new WeakMap<ConcreteComponent, ObjectEmitsOptions>()
+
+/**
+ * Normalize the emits option of a component.
+ * 标准化组件的 emits 选项。
+ *
+ * @param comp - The component definition. 组件定义。
+ * @param appContext - The application context. 应用上下文。
+ * @param asMixin - Whether the component is being normalized as a mixin. 组件是否作为 mixin 被标准化。
+ */
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
@@ -249,6 +271,7 @@ export function normalizeEmitsOptions(
   let normalized: ObjectEmitsOptions = {}
 
   // apply mixin/extends props
+  // 应用 mixin/extends 属性
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendEmits = (raw: ComponentOptions) => {
@@ -291,6 +314,9 @@ export function normalizeEmitsOptions(
 // Check if an incoming prop key is a declared emit event listener.
 // e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
 // both considered matched listeners.
+// 检查传入的 prop key 是否是声明的 emit 事件监听器。
+// 例如，对于 `emits: { click: null }`，名为 `onClick` 和 `onclick` 的 props
+// 都被认为是匹配的监听器。
 export function isEmitListener(
   options: ObjectEmitsOptions | null,
   key: string,

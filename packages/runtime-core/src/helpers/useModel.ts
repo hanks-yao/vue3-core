@@ -6,6 +6,10 @@ import { warn } from '../warning'
 import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
 
+/**
+ * useModel 是一个辅助函数，用于在 Composition API 中简化 v-model 的实现。
+ * 它创建了一个 ref，该 ref 的值与 prop 同步，并在修改时触发相应的 update 事件。
+ */
 export function useModel<
   M extends PropertyKey,
   T extends Record<string, any>,
@@ -37,11 +41,13 @@ export function useModel(
   const hyphenatedName = hyphenate(name)
   const modifiers = getModelModifiers(props, camelizedName)
 
+  // 创建一个自定义 ref 来管理 model 的值
   const res = customRef((track, trigger) => {
     let localValue: any
     let prevSetValue: any = EMPTY_OBJ
     let prevEmittedValue: any
 
+    // 监听 prop 的变化，并同步到本地值
     watchSyncEffect(() => {
       const propValue = props[camelizedName]
       if (hasChanged(localValue, propValue)) {
@@ -69,6 +75,7 @@ export function useModel(
           !(
             rawProps &&
             // check if parent has passed v-model
+            // 检查父组件是否传递了 v-model
             (name in rawProps ||
               camelizedName in rawProps ||
               hyphenatedName in rawProps) &&
@@ -78,6 +85,7 @@ export function useModel(
           )
         ) {
           // no v-model, local update
+          // 没有 v-model，进行本地更新
           localValue = value
           trigger()
         }
@@ -87,6 +95,9 @@ export function useModel(
         // emitted to parent was the same, the parent will not trigger any
         // updates and there will be no prop sync. However the local input state
         // may be out of sync, so we need to force an update here.
+        // #10279: 如果本地值通过 setter 转换，但发送给父组件的值是相同的，
+        // 父组件将不会触发任何更新，也不会有 prop 同步。
+        // 然而，本地输入状态可能已经不同步，所以我们需要在这里强制更新。
         if (
           hasChanged(value, emittedValue) &&
           hasChanged(value, prevSetValue) &&
@@ -101,6 +112,7 @@ export function useModel(
   })
 
   // @ts-expect-error
+  // 使返回值可迭代，以便支持 const [model, modifiers] = useModel() 的解构用法
   res[Symbol.iterator] = () => {
     let i = 0
     return {
@@ -117,6 +129,9 @@ export function useModel(
   return res
 }
 
+/**
+ * 获取 model 的修饰符
+ */
 export const getModelModifiers = (
   props: Record<string, any>,
   modelName: string,

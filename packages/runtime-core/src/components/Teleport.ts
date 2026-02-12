@@ -50,6 +50,7 @@ const resolveTarget = <T = RendererElement>(
         warn(
           `Current renderer does not support string target for Teleports. ` +
             `(missing querySelector renderer option)`,
+          // 当前渲染器不支持 Teleport 的字符串目标。(缺少 querySelector 渲染器选项)
         )
       return null
     } else {
@@ -60,13 +61,16 @@ const resolveTarget = <T = RendererElement>(
             `Note the target element must exist before the component is mounted - ` +
             `i.e. the target cannot be rendered by the component itself, and ` +
             `ideally should be outside of the entire Vue component tree.`,
+          // 无法通过选择器 "${targetSelector}" 找到 Teleport 目标。
+          // 注意目标元素必须在组件挂载之前存在 -
+          // 即目标不能由组件本身渲染，理想情况下应该在整个 Vue 组件树之外。
         )
       }
       return target as T
     }
   } else {
     if (__DEV__ && !targetSelector && !isTeleportDisabled(props)) {
-      warn(`Invalid Teleport target: ${targetSelector}`)
+      warn(`Invalid Teleport target: ${targetSelector}`) // 无效的 Teleport 目标: ${targetSelector}
     }
     return targetSelector as T
   }
@@ -99,6 +103,7 @@ export const TeleportImpl = {
 
     // #3302
     // HMR updated, force full diff
+    // HMR 更新，强制全量 diff
     if (__DEV__ && isHmrUpdating) {
       optimized = false
       dynamicChildren = null
@@ -106,6 +111,7 @@ export const TeleportImpl = {
 
     if (n1 == null) {
       // insert anchors in the main view
+      // 在主视图中插入锚点
       const placeholder = (n2.el = __DEV__
         ? createComment('teleport start')
         : createText(''))
@@ -118,6 +124,7 @@ export const TeleportImpl = {
       const mount = (container: RendererElement, anchor: RendererNode) => {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
+        // Teleport *总是* 拥有数组子节点。这在编译器和 vnode 子节点规范化中都得到了强制执行。
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
             children as VNodeArrayChildren,
@@ -137,6 +144,7 @@ export const TeleportImpl = {
         const targetAnchor = prepareAnchor(target, n2, createText, insert)
         if (target) {
           // #2652 we could be teleporting from a non-SVG tree into an SVG tree
+          // #2652 我们可能正在从非 SVG 树 teleport 到 SVG 树中
           if (namespace !== 'svg' && isTargetSVG(target)) {
             namespace = 'svg'
           } else if (namespace !== 'mathml' && isTargetMathML(target)) {
@@ -144,6 +152,7 @@ export const TeleportImpl = {
           }
 
           // track CE teleport targets
+          // 追踪自定义元素 (CE) 的 teleport 目标
           if (parentComponent && parentComponent.isCE) {
             ;(
               parentComponent.ce!._teleportTargets ||
@@ -197,6 +206,7 @@ export const TeleportImpl = {
         return
       }
       // update content
+      // 更新内容
       n2.el = n1.el
       n2.targetStart = n1.targetStart
       const mainAnchor = (n2.anchor = n1.anchor)!
@@ -214,6 +224,7 @@ export const TeleportImpl = {
 
       if (dynamicChildren) {
         // fast path when the teleport happens to be a block root
+        // 当 teleport 恰好是块根时的快速路径
         patchBlockChildren(
           n1.dynamicChildren!,
           dynamicChildren,
@@ -227,6 +238,9 @@ export const TeleportImpl = {
         // in the teleport inherit previous DOM references so that they can
         // be moved in future patches.
         // in dev mode, deep traversal is necessary for HMR
+        // 即使在块树模式下，我们也需要确保 teleport 中的所有根级节点
+        // 继承以前的 DOM 引用，以便它们可以在将来的补丁中移动。
+        // 在开发模式下，HMR 需要深度遍历
         traverseStaticChildren(n1, n2, !__DEV__)
       } else if (!optimized) {
         patchChildren(
@@ -246,6 +260,8 @@ export const TeleportImpl = {
         if (!wasDisabled) {
           // enabled -> disabled
           // move into main container
+          // 启用 -> 禁用
+          // 移动到主容器
           moveTeleport(
             n2,
             container,
@@ -257,12 +273,15 @@ export const TeleportImpl = {
           // #7835
           // When `teleport` is disabled, `to` may change, making it always old,
           // to ensure the correct `to` when enabled
+          // 当 `teleport` 被禁用时，`to` 可能会改变，使其总是旧的，
+          // 以确保在启用时 `to` 是正确的
           if (n2.props && n1.props && n2.props.to !== n1.props.to) {
             n2.props.to = n1.props.to
           }
         }
       } else {
         // target changed
+        // 目标改变
         if ((n2.props && n2.props.to) !== (n1.props && n1.props.to)) {
           const nextTarget = (n2.target = resolveTarget(
             n2.props,
@@ -286,6 +305,8 @@ export const TeleportImpl = {
         } else if (wasDisabled) {
           // disabled -> enabled
           // move into teleport target
+          // 禁用 -> 启用
+          // 移动到 teleport 目标
           moveTeleport(
             n2,
             target,
@@ -322,6 +343,7 @@ export const TeleportImpl = {
     }
 
     // an unmounted teleport should always unmount its children whether it's disabled or not
+    // 一个卸载的 teleport 应该总是卸载它的子节点，无论它是否被禁用
     doRemove && hostRemove(anchor!)
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       const shouldRemove = doRemove || !isTeleportDisabled(props)
@@ -344,8 +366,8 @@ export const TeleportImpl = {
 
 export enum TeleportMoveTypes {
   TARGET_CHANGE,
-  TOGGLE, // enable / disable
-  REORDER, // moved in the main view
+  TOGGLE, // enable / disable // 启用 / 禁用
+  REORDER, // moved in the main view // 在主视图中移动
 }
 
 function moveTeleport(
@@ -356,20 +378,25 @@ function moveTeleport(
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
 ): void {
   // move target anchor if this is a target change.
+  // 如果这是目标改变，移动目标锚点。
   if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
     insert(vnode.targetAnchor!, container, parentAnchor)
   }
   const { el, anchor, shapeFlag, children, props } = vnode
   const isReorder = moveType === TeleportMoveTypes.REORDER
   // move main view anchor if this is a re-order.
+  // 如果这是重新排序，移动主视图锚点。
   if (isReorder) {
     insert(el!, container, parentAnchor)
   }
   // if this is a re-order and teleport is enabled (content is in target)
   // do not move children. So the opposite is: only move children if this
   // is not a reorder, or the teleport is disabled
+  // 如果这是重新排序并且 teleport 是启用的（内容在目标中）
+  // 不要移动子节点。所以反过来说：只有在这不是重新排序，或者 teleport 是禁用的时候才移动子节点
   if (!isReorder || isTeleportDisabled(props)) {
     // Teleport has either Array children or no children.
+    // Teleport 要么有数组子节点，要么没有子节点。
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         move(
@@ -382,6 +409,7 @@ function moveTeleport(
     }
   }
   // move main view anchor if this is a re-order.
+  // 如果这是重新排序，移动主视图锚点。
   if (isReorder) {
     insert(anchor!, container, parentAnchor)
   }
@@ -389,6 +417,7 @@ function moveTeleport(
 
 interface TeleportTargetElement extends Element {
   // last teleport target
+  // 上一个 teleport 目标
   _lpa?: Node | null
 }
 
@@ -439,6 +468,8 @@ function hydrateTeleport(
   if (target) {
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
+    // 如果多个 teleport 渲染到同一个目标元素，我们需要
+    // 从上一个 teleport 结束的地方开始，而不是第一个节点
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -455,6 +486,8 @@ function hydrateTeleport(
         // lookahead until we find the target anchor
         // we cannot rely on return value of hydrateChildren() because there
         // could be nested teleports
+        // 向前查找直到找到目标锚点
+        // 我们不能依赖 hydrateChildren() 的返回值，因为可能存在嵌套的 teleport
         let targetAnchor = targetNode
         while (targetAnchor) {
           if (targetAnchor && targetAnchor.nodeType === 8) {
@@ -474,6 +507,9 @@ function hydrateTeleport(
         // correct position on the final page during SSR. the targetAnchor will
         // always be null, we need to manually add targetAnchor to ensure
         // Teleport it can properly unmount or move
+        // #11400 如果对应于 Teleport 的 HTML 在 SSR 期间没有嵌入到
+        // 最终页面上的正确位置。targetAnchor 将始终为 null，
+        // 我们需要手动添加 targetAnchor 以确保 Teleport 可以正确卸载或移动
         if (!vnode.targetAnchor) {
           prepareAnchor(target, vnode, createText, insert)
         }
@@ -499,6 +535,7 @@ function hydrateTeleport(
 }
 
 // Force-casted public typing for h and TSX props inference
+// 强制转换的公共类型，用于 h 和 TSX props 推断
 export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
   new (): {
@@ -512,6 +549,8 @@ export const Teleport = TeleportImpl as unknown as {
 function updateCssVars(vnode: VNode, isDisabled: boolean) {
   // presence of .ut method indicates owner component uses css vars.
   // code path here can assume browser environment.
+  // .ut 方法的存在表明所有者组件使用了 css 变量。
+  // 这里的代码路径可以假设是浏览器环境。
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
     let node, anchor
@@ -541,6 +580,7 @@ function prepareAnchor(
 
   // attach a special property, so we can skip teleported content in
   // renderer's nextSibling search
+  // 附加一个特殊属性，这样我们就可以在渲染器的 nextSibling 搜索中跳过 teleport 的内容
   targetStart[TeleportEndKey] = targetAnchor
 
   if (target) {

@@ -62,6 +62,8 @@ export interface LegacyPublicProperties {
   $listeners: Record<string, Function | Function[]>
 }
 
+// Install Vue 2 compat instance properties
+// 安装 Vue 2 兼容实例属性
 export function installCompatInstanceProperties(
   map: PublicPropertiesMap,
 ): void {
@@ -75,32 +77,43 @@ export function installCompatInstanceProperties(
   }
 
   extend(map, {
+    // Vue 2 $set
+    // Vue 2 的 $set 方法
     $set: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SET, i)
       return set
     },
 
+    // Vue 2 $delete
+    // Vue 2 的 $delete 方法
     $delete: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_DELETE, i)
       return del
     },
 
+    // Vue 2 $mount
+    // Vue 2 的 $mount 方法
     $mount: i => {
       assertCompatEnabled(
         DeprecationTypes.GLOBAL_MOUNT,
         null /* this warning is global */,
       )
       // root mount override from ./global.ts in installCompatMount
+      // 根挂载覆盖来自 ./global.ts 中的 installCompatMount
       return i.ctx._compat_mount || NOOP
     },
 
+    // Vue 2 $destroy
+    // Vue 2 的 $destroy 方法
     $destroy: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_DESTROY, i)
       // root destroy override from ./global.ts in installCompatMount
+      // 根销毁覆盖来自 ./global.ts 中的 installCompatMount
       return i.ctx._compat_destroy || NOOP
     },
 
     // overrides existing accessor
+    // 覆盖现有的访问器
     $slots: i => {
       if (
         isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, i) &&
@@ -112,20 +125,28 @@ export function installCompatInstanceProperties(
       return __DEV__ ? shallowReadonly(i.slots) : i.slots
     },
 
+    // Vue 2 $scopedSlots (mapped to $slots in Vue 3)
+    // Vue 2 的 $scopedSlots（在 Vue 3 中映射为 $slots）
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
       return __DEV__ ? shallowReadonly(i.slots) : i.slots
     },
 
+    // Event emitter methods
+    // 事件发射器方法
     $on: i => on.bind(null, i),
     $once: i => once.bind(null, i),
     $off: i => off.bind(null, i),
 
+    // Vue 2 $children & $listeners
+    // Vue 2 的 $children 和 $listeners
     $children: getCompatChildren,
     $listeners: getCompatListeners,
 
     // inject additional properties into $options for compat
+    // 为兼容性向 $options 注入额外属性
     // e.g. vuex needs this.$options.parent
+    // 例如 vuex 需要 this.$options.parent
     $options: i => {
       if (!isCompatEnabled(DeprecationTypes.PRIVATE_APIS, i)) {
         return resolveMergedOptions(i)
@@ -156,11 +177,15 @@ export function installCompatInstanceProperties(
     },
   } as PublicPropertiesMap)
 
+  // Private Vue 2 APIs used by compiler-generated code
+  // 编译器生成的代码使用的私有 Vue 2 API
   const privateAPIs = {
     // needed by many libs / render fns
+    // 许多库/渲染函数需要
     $vnode: i => i.vnode,
 
     // some private properties that are likely accessed...
+    // 一些可能被访问的私有属性...
     _self: i => i.proxy,
     _uid: i => i.uid,
     _data: i => i.data,
@@ -168,6 +193,7 @@ export function installCompatInstanceProperties(
     _isDestroyed: i => i.isUnmounted,
 
     // v2 render helpers
+    // v2 渲染辅助函数
     $createElement: () => compatH,
     _c: () => compatH,
     _o: () => legacyMarkOnce,

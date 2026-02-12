@@ -46,6 +46,7 @@ export function convertLegacyRenderFn(
   const render = Component.render as InternalRenderFunction | undefined
 
   // v3 runtime compiled, or already checked / wrapped
+  // v3 运行时编译的，或者已经检查/包装过的
   if (!render || render._rc || render._compatChecked || render._compatWrapped) {
     return
   }
@@ -54,11 +55,14 @@ export function convertLegacyRenderFn(
     // v3 pre-compiled function, since v2 render functions never need more than
     // 2 arguments, and v2 functional render functions would have already been
     // normalized into v3 functional components
+    // v3 预编译函数，因为 v2 渲染函数只需要不超过 2 个参数，
+    // 并且 v2 函数式渲染函数已经被规范化为 v3 函数式组件
     render._compatChecked = true
     return
   }
 
   // v2 render function, try to provide compat
+  // v2 渲染函数，尝试提供兼容性
   if (checkCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)) {
     const wrapped = (Component.render = function compatRender() {
       // @ts-expect-error
@@ -129,12 +133,15 @@ export function compatH(
   }
 
   // to support v2 string component name look!up
+  // 支持 v2 字符串组件名称查找
   if (typeof type === 'string') {
     const t = hyphenate(type)
     if (t === 'transition' || t === 'transition-group' || t === 'keep-alive') {
       // since transition and transition-group are runtime-dom-specific,
       // we cannot import them directly here. Instead they are registered using
       // special keys in @vue/compat entry.
+      // 由于 transition 和 transition-group 是 runtime-dom 特有的，
+      // 我们不能直接在这里导入它们。相反，它们在 @vue/compat 入口中使用特殊键进行注册。
       type = `__compat__${t}`
     }
     type = resolveDynamicComponent(type)
@@ -145,10 +152,12 @@ export function compatH(
   if (l === 2 || is2ndArgArrayChildren) {
     if (isObject(propsOrChildren) && !is2ndArgArrayChildren) {
       // single vnode without props
+      // 没有 props 的单个 vnode
       if (isVNode(propsOrChildren)) {
         return convertLegacySlots(createVNode(type, null, [propsOrChildren]))
       }
       // props without children
+      // 只有 props 没有 children
       return convertLegacySlots(
         convertLegacyDirectives(
           createVNode(type, convertLegacyProps(propsOrChildren, type)),
@@ -157,6 +166,7 @@ export function compatH(
       )
     } else {
       // omit props
+      // 省略 props
       return convertLegacySlots(createVNode(type, null, propsOrChildren))
     }
   } else {
@@ -218,6 +228,7 @@ function convertLegacyProps(
 
   if (legacyProps.model && isObject(type)) {
     // v2 compiled component v-model
+    // v2 编译组件 v-model
     const { prop = 'value', event = 'input' } = (type as any).model || {}
     converted[prop] = legacyProps.model.value
     converted[compatModelEventPrefix + event] = legacyProps.model.callback
@@ -228,6 +239,7 @@ function convertLegacyProps(
 
 function convertLegacyEventKey(event: string): string {
   // normalize v2 event prefixes
+  // 规范化 v2 事件前缀
   if (event[0] === '&') {
     event = event.slice(1) + 'Passive'
   }
@@ -268,6 +280,7 @@ function convertLegacySlots(vnode: VNode): VNode {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && isArray(children)) {
     slots = {}
     // check "slot" property on vnodes and turn them into v3 function slots
+    // 检查 vnode 上的 "slot" 属性并将其转换为 v3 函数式插槽
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
       const slotName =
@@ -283,7 +296,7 @@ function convertLegacySlots(vnode: VNode): VNode {
       for (const key in slots) {
         const slotChildren = slots[key]
         slots[key] = () => slotChildren
-        slots[key]._ns = true /* non-scoped slot */
+        slots[key]._ns = true /* non-scoped slot */ /* 非作用域插槽 */
       }
     }
   }
@@ -311,12 +324,12 @@ export function defineLegacyVNodeProperties(vnode: VNode): void {
     isCompatEnabled(
       DeprecationTypes.RENDER_FUNCTION,
       currentRenderingInstance,
-      true /* enable for built-ins */,
+      true /* enable for built-ins */ /* 为内置组件启用 */,
     ) &&
     isCompatEnabled(
       DeprecationTypes.PRIVATE_APIS,
       currentRenderingInstance,
-      true /* enable for built-ins */,
+      true /* enable for built-ins */ /* 为内置组件启用 */,
     )
   ) {
     const context = currentRenderingInstance

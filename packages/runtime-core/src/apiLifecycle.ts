@@ -28,15 +28,21 @@ export function injectHook(
     // cache the error handling wrapper for injected hooks so the same hook
     // can be properly deduped by the scheduler. "__weh" stands for "with error
     // handling".
+    // 缓存注入钩子的错误处理包装器，以便调度程序可以正确地对同一个钩子进行去重。
+    // "__weh" 代表 "with error handling"（带有错误处理）。
     const wrappedHook =
       hook.__weh ||
       (hook.__weh = (...args: unknown[]) => {
         // disable tracking inside all lifecycle hooks
         // since they can potentially be called inside effects.
+        // 在所有生命周期钩子内部禁用跟踪，
+        // 因为它们可能会在 effect 内部被调用。
         pauseTracking()
         // Set currentInstance during hook invocation.
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
+        // 在钩子调用期间设置 currentInstance。
+        // 这假设钩子不会同步触发其他钩子，只有当用户做了一些非常奇怪的事情时，这才会是假的。
         const reset = setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
         reset()
@@ -70,6 +76,7 @@ const createHook =
     target: ComponentInternalInstance | null = currentInstance,
   ): void => {
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
+    // 在 SSR 期间，post-create 生命周期注册是无操作的（serverPrefetch 除外）
     if (
       !isInSSRComponentSetup ||
       lifecycle === LifecycleHooks.SERVER_PREFETCH

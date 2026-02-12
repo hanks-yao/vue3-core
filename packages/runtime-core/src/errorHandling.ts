@@ -8,12 +8,15 @@ import { WatchErrorCodes } from '@vue/reactivity'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
+// 除了生命周期钩子之外，用户提供的函数可能被执行的上下文。
 export enum ErrorCodes {
   SETUP_FUNCTION,
   RENDER_FUNCTION,
   // The error codes for the watch have been transferred to the reactivity
   // package along with baseWatch to maintain code compatibility. Hence,
   // it is essential to keep these values unchanged.
+  // watch 的错误代码已连同 baseWatch 一起转移到了 reactivity 包中，以保持代码兼容性。
+  // 因此，保持这些值不变至关重要。
   // WATCH_GETTER,
   // WATCH_CALLBACK,
   // WATCH_CLEANUP,
@@ -67,6 +70,14 @@ export const ErrorTypeStrings: Record<ErrorTypes, string> = {
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes | WatchErrorCodes
 
+/**
+ * Call a function with error handling.
+ * 使用错误处理机制调用函数。
+ * @param fn - Function to call
+ * @param instance - Component instance
+ * @param type - Error type
+ * @param args - Arguments to pass to the function
+ */
 export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInternalInstance | null | undefined,
@@ -80,6 +91,12 @@ export function callWithErrorHandling(
   }
 }
 
+/**
+ * Call a function or an array of functions with async error handling.
+ * 使用异步错误处理机制调用函数或函数数组。
+ * Handles both sync errors and Promise rejections.
+ * 处理同步错误和 Promise rejections。
+ */
 export function callWithAsyncErrorHandling(
   fn: Function | Function[],
   instance: ComponentInternalInstance | null,
@@ -109,6 +126,14 @@ export function callWithAsyncErrorHandling(
   }
 }
 
+/**
+ * The main error handling function.
+ * 主要的错误处理函数。
+ * It propagates errors up the component tree to errorCaptured hooks,
+ * handles app-level error handlers, and logs errors if unhandled.
+ * 它将错误向上冒泡到组件树的 errorCaptured 钩子，
+ * 处理应用级的错误处理器，如果未被处理则记录错误。
+ */
 export function handleError(
   err: unknown,
   instance: ComponentInternalInstance | null | undefined,
@@ -121,8 +146,10 @@ export function handleError(
   if (instance) {
     let cur = instance.parent
     // the exposed instance is the render proxy to keep it consistent with 2.x
+    // 暴露的实例是渲染代理，以保持与 2.x 的一致性
     const exposedInstance = instance.proxy
     // in production the hook receives only the error code
+    // 在生产环境中，钩子只接收错误代码
     const errorInfo = __DEV__
       ? ErrorTypeStrings[type]
       : `https://vuejs.org/error-reference/#runtime-${type}`
@@ -140,6 +167,7 @@ export function handleError(
       cur = cur.parent
     }
     // app-level handling
+    // 应用级处理
     if (errorHandler) {
       pauseTracking()
       callWithErrorHandling(errorHandler, null, ErrorCodes.APP_ERROR_HANDLER, [
@@ -171,6 +199,7 @@ function logError(
       popWarningContext()
     }
     // crash in dev by default so it's more noticeable
+    // 默认在开发环境中崩溃，以便更引人注目
     if (throwInDev) {
       throw err
     } else if (!__TEST__) {
@@ -180,6 +209,7 @@ function logError(
     throw err
   } else {
     // recover in prod to reduce the impact on end-user
+    // 在生产环境中恢复，以减少对最终用户的影响
     console.error(err)
   }
 }

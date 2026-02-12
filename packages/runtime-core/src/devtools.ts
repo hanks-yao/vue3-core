@@ -10,6 +10,8 @@ interface AppRecord {
   types: Record<string, string | Symbol>
 }
 
+// Devtools 钩子事件枚举
+// Enum for Devtools hook events
 enum DevtoolsHooks {
   APP_INIT = 'app:init',
   APP_UNMOUNT = 'app:unmount',
@@ -31,12 +33,16 @@ export interface DevtoolsHook {
   /**
    * Added at https://github.com/vuejs/devtools/commit/f2ad51eea789006ab66942e5a27c0f0986a257f9
    * Returns whether the arg was buffered or not
+   * 添加于 https://github.com/vuejs/devtools/commit/f2ad51eea789006ab66942e5a27c0f0986a257f9
+   * 返回参数是否被缓冲
    */
   cleanupBuffer?: (matchArg: unknown) => boolean
 }
 
 export let devtools: DevtoolsHook
 
+// 缓冲事件队列，用于在 devtools 钩子注入前存储事件
+// Buffer for events, used to store events before the devtools hook is injected
 let buffer: { event: string; args: any[] }[] = []
 
 let devtoolsNotInstalled = false
@@ -53,16 +59,22 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
   devtools = hook
   if (devtools) {
     devtools.enabled = true
+    // 重放缓冲的事件
+    // Replay buffered events
     buffer.forEach(({ event, args }) => devtools.emit(event, ...args))
     buffer = []
   } else if (
     // handle late devtools injection - only do this if we are in an actual
     // browser environment to avoid the timer handle stalling test runner exit
     // (#4815)
+    // 处理延迟的 devtools 注入 - 仅在实际的浏览器环境中执行此操作，
+    // 以避免定时器句柄阻碍测试运行器退出 (#4815)
     typeof window !== 'undefined' &&
     // some envs mock window but not fully
+    // 某些环境模拟了 window 但不完整
     window.HTMLElement &&
     // also exclude jsdom
+    // 同时也排除 jsdom
     // eslint-disable-next-line no-restricted-syntax
     !window.navigator?.userAgent?.includes('jsdom')
   ) {
@@ -73,6 +85,8 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
     })
     // clear buffer after 3s - the user probably doesn't have devtools installed
     // at all, and keeping the buffer will cause memory leaks (#4738)
+    // 3秒后清除缓冲区 - 用户可能根本没有安装 devtools，
+    // 保留缓冲区会导致内存泄漏 (#4738)
     setTimeout(() => {
       if (!devtools) {
         target.__VUE_DEVTOOLS_HOOK_REPLAY__ = null
@@ -82,6 +96,7 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
     }, 3000)
   } else {
     // non-browser env, assume not installed
+    // 非浏览器环境，假设未安装
     devtoolsNotInstalled = true
     buffer = []
   }
@@ -117,6 +132,7 @@ export const devtoolsComponentRemoved = (
     devtools &&
     typeof devtools.cleanupBuffer === 'function' &&
     // remove the component if it wasn't buffered
+    // 如果组件未被缓冲，则移除该组件
     !devtools.cleanupBuffer(component)
   ) {
     _devtoolsComponentRemoved(component)

@@ -10,6 +10,8 @@ import {
 } from '../component'
 import { warn } from '../warning'
 
+// 弃用类型枚举
+// Enum for deprecation types
 export enum DeprecationTypes {
   GLOBAL_MOUNT = 'GLOBAL_MOUNT',
   GLOBAL_MOUNT_CONTAINER = 'GLOBAL_MOUNT_CONTAINER',
@@ -71,6 +73,8 @@ type DeprecationData = {
   link?: string
 }
 
+// 弃用数据映射，包含警告消息和文档链接
+// Mapping of deprecation data, containing warning messages and documentation links
 export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.GLOBAL_MOUNT]: {
     message:
@@ -166,6 +170,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   },
 
   [DeprecationTypes.CONFIG_WHITESPACE]: {
+    // 此警告仅在完整构建版中使用运行时编译时相关，因此将其放在运行时 compatConfig 列表中。
     // this warning is only relevant in the full build when using runtime
     // compilation, so it's put in the runtime compatConfig list.
     message:
@@ -431,10 +436,14 @@ const warnCount: Record<string, number> = Object.create(null)
 // test only
 let warningEnabled = true
 
+// 切换弃用警告的开关
+// Toggle deprecation warning switch
 export function toggleDeprecationWarning(flag: boolean): void {
   warningEnabled = flag
 }
 
+// 发出弃用警告
+// Issue a deprecation warning
 export function warnDeprecation(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
@@ -450,6 +459,7 @@ export function warnDeprecation(
   instance = instance || getCurrentInstance()
 
   // check user config
+  // 检查用户配置
   const config = getCompatConfigForKey(key, instance)
   if (config === 'suppress-warning') {
     return
@@ -463,6 +473,7 @@ export function warnDeprecation(
   }
 
   // skip if the same warning is emitted for the same component type
+  // 如果同一组件类型发出了相同的警告，则跳过
   const componentDupKey = dupKey + compId
   if (!__TEST__ && componentDupKey in instanceWarned) {
     return
@@ -471,6 +482,7 @@ export function warnDeprecation(
 
   // same warning, but different component. skip the long message and just
   // log the key and count.
+  // 相同的警告，但组件不同。跳过长消息，只记录键和计数。
   if (!__TEST__ && dupKey in warnCount) {
     warn(`(deprecation ${key}) (${++warnCount[dupKey] + 1})`)
     return
@@ -502,6 +514,8 @@ export const globalCompatConfig: CompatConfig = {
   MODE: 2,
 }
 
+// 配置全局兼容性设置
+// Configure global compatibility settings
 export function configureCompat(config: CompatConfig): void {
   if (__DEV__) {
     validateCompatConfig(config)
@@ -513,6 +527,7 @@ const seenConfigObjects = /*@__PURE__*/ new WeakSet<CompatConfig>()
 const warnedInvalidKeys: Record<string, boolean> = {}
 
 // dev only
+// 验证兼容性配置（仅限开发环境）
 export function validateCompatConfig(
   config: CompatConfig,
   instance?: ComponentInternalInstance,
@@ -551,6 +566,8 @@ export function validateCompatConfig(
   }
 }
 
+// 获取指定键的兼容性配置
+// Get compatibility configuration for a specific key
 export function getCompatConfigForKey(
   key: DeprecationTypes | 'MODE',
   instance: ComponentInternalInstance | null,
@@ -563,12 +580,15 @@ export function getCompatConfigForKey(
   return globalCompatConfig[key]
 }
 
+// 检查是否启用了兼容性模式
+// Check if compatibility mode is enabled
 export function isCompatEnabled(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
   enableForBuiltIn = false,
 ): boolean {
   // skip compat for built-in components
+  // 跳过内置组件的兼容性检查
   if (!enableForBuiltIn && instance && instance.type.__isBuiltIn) {
     return false
   }
@@ -589,6 +609,7 @@ export function isCompatEnabled(
 
 /**
  * Use this for features that are completely removed in non-compat build.
+ * 用于在非兼容构建中完全移除的功能。
  */
 export function assertCompatEnabled(
   key: DeprecationTypes,
@@ -605,6 +626,7 @@ export function assertCompatEnabled(
 /**
  * Use this for features where legacy usage is still possible, but will likely
  * lead to runtime error if compat is disabled. (warn in all cases)
+ * 用于旧用法仍然可能，但如果禁用兼容性可能会导致运行时错误的功能。（在所有情况下都会警告）
  */
 export function softAssertCompatEnabled(
   key: DeprecationTypes,
@@ -621,6 +643,8 @@ export function softAssertCompatEnabled(
  * Use this for features with the same syntax but with mutually exclusive
  * behavior in 2 vs 3. Only warn if compat is enabled.
  * e.g. render function
+ * 用于具有相同语法但在 Vue 2 和 Vue 3 中行为互斥的功能。仅在启用兼容性时警告。
+ * 例如：渲染函数
  */
 export function checkCompatEnabled(
   key: DeprecationTypes,
@@ -635,6 +659,7 @@ export function checkCompatEnabled(
 }
 
 // run tests in v3 mode by default
+// 默认在 v3 模式下运行测试
 if (__TEST__) {
   configureCompat({
     MODE: 3,

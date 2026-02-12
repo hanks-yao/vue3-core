@@ -176,6 +176,7 @@ function doWatch(
   if (__DEV__) baseWatchOptions.onWarn = warn
 
   // immediate watcher or watchEffect
+  // 立即执行的 watcher 或 watchEffect
   const runsImmediately = (cb && immediate) || (!cb && flush !== 'post')
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
@@ -196,6 +197,7 @@ function doWatch(
     callWithAsyncErrorHandling(fn, instance, type, args)
 
   // scheduler
+  // 调度器
   let isPre = false
   if (flush === 'post') {
     baseWatchOptions.scheduler = job => {
@@ -203,6 +205,7 @@ function doWatch(
     }
   } else if (flush !== 'sync') {
     // default: 'pre'
+    // 默认: 'pre'
     isPre = true
     baseWatchOptions.scheduler = (job, isFirstRun) => {
       if (isFirstRun) {
@@ -216,6 +219,7 @@ function doWatch(
   baseWatchOptions.augmentJob = (job: SchedulerJob) => {
     // important: mark the job as a watcher callback so that scheduler knows
     // it is allowed to self-trigger (#1727)
+    // 重要：将作业标记为观察者回调，以便调度程序知道允许它自我触发 (#1727)
     if (cb) {
       job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
     }

@@ -61,6 +61,7 @@ const logMismatchError = () => {
     return
   }
   // this error should show up in production
+  // 这个错误应该在生产环境中显示
   console.error('Hydration completed but contains mismatches.')
   hasLoggedMismatchError = true
 }
@@ -89,6 +90,9 @@ export const isComment = (node: Node): node is Comment =>
 // it out creates a ton of unnecessary complexity.
 // Hydration also depends on some renderer internal logic which needs to be
 // passed in via arguments.
+// 注意：hydration（激活）是特定于 DOM 的
+// 但我们必须将其放在 core 中，因为它与 core 紧密耦合 - 将其拆分出去会产生大量不必要的复杂性。
+// Hydration 还依赖于一些渲染器内部逻辑，这些逻辑需要通过参数传递进来。
 export function createHydrationFunctions(
   rendererInternals: RendererInternals<Node, Element>,
 ): [
@@ -122,6 +126,7 @@ export function createHydrationFunctions(
         warn(
           `Attempting to hydrate existing markup but container is empty. ` +
             `Performing full mount instead.`,
+          // 尝试激活现有标记但容器为空。改为执行完整挂载。
         )
       patch(null, vnode, container)
       flushPostFlushCbs()
@@ -174,6 +179,8 @@ export function createHydrationFunctions(
         if (domType !== DOMNodeTypes.TEXT) {
           // #5728 empty text node inside a slot can cause hydration failure
           // because the server rendered HTML won't contain a text node
+          // #5728 插槽内的空文本节点可能导致 hydration 失败
+          // 因为服务器渲染的 HTML 不会包含文本节点
           if (vnode.children === '') {
             insert((vnode.el = createText('')), parentNode(node)!, node)
             nextNode = node
@@ -202,6 +209,8 @@ export function createHydrationFunctions(
           nextNode = nextSibling(node)
           // wrapped <transition appear>
           // replace <template> node with inner child
+          // 包裹了 <transition appear>
+          // 用内部子节点替换 <template> 节点
           replaceNode(
             (vnode.el = node.content.firstChild!),
             node,
@@ -216,6 +225,7 @@ export function createHydrationFunctions(
       case Static:
         if (isFragmentStart) {
           // entire template is static but SSRed as a fragment
+          // 整个模板是静态的，但在 SSR 中作为片段渲染
           node = nextSibling(node)!
           domType = node.nodeType
         }
@@ -224,6 +234,8 @@ export function createHydrationFunctions(
           nextNode = node
           // if the static vnode has its content stripped during build,
           // adopt it from the server-rendered HTML.
+          // 如果静态 vnode 的内容在构建期间被剥离，
+          // 则从服务器渲染的 HTML 中采用它。
           const needToAdoptContent = !(vnode.children as string).length
           for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
@@ -278,6 +290,8 @@ export function createHydrationFunctions(
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
+          // 设置渲染副作用时，如果初始 vnode 已经设置了 .el，
+          // 组件将在其子树上执行 hydration 而不是挂载。
           vnode.slotScopeIds = slotScopeIds
           const container = parentNode(node)!
 
@@ -286,10 +300,14 @@ export function createHydrationFunctions(
             // If it's a fragment: since components may be async, we cannot rely
             // on component's rendered output to determine the end of the
             // fragment. Instead, we do a lookahead to find the end anchor node.
+            // 如果是片段：由于组件可能是异步的，我们不能依赖组件的渲染输出来确定片段的结束。
+            // 相反，我们要向前查找以找到结束锚点节点。
             nextNode = locateClosingAnchor(node)
           } else if (isComment(node) && node.data === 'teleport start') {
             // #4293 #6152
             // If a teleport is at component root, look ahead for teleport end.
+            // #4293 #6152
+            // 如果 teleport 位于组件根部，则向前查找 teleport 结束标记。
             nextNode = locateClosingAnchor(node, node.data, 'teleport end')
           } else {
             nextNode = nextSibling(node)
@@ -309,6 +327,9 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
+          // #3787
+          // 如果组件是异步的，它可能会在内部组件加载之前被移动/卸载，
+          // 所以我们需要给它一个与其采用的 DOM 匹配的占位符 vnode。
           if (
             isAsyncWrapper(vnode) &&
             !(vnode.type as ComponentOptions).__asyncResolved
@@ -378,9 +399,14 @@ export function createHydrationFunctions(
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     // #7476 <input indeterminate>
+    // #4006 对于具有非字符串 v-model 值绑定的表单元素
+    // 例如 <option :value="obj">, <input type="checkbox" :true-value="1">
+    // #7476 <input indeterminate>
     const forcePatch = type === 'input' || type === 'option'
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
+    // 如果这是提升的静态节点，则跳过 props 和 children
+    // #5405 在开发模式下，始终为 HMR 激活 children
     if (__DEV__ || forcePatch || patchFlag !== PatchFlags.CACHED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
@@ -416,6 +442,7 @@ export function createHydrationFunctions(
       if (
         shapeFlag & ShapeFlags.ARRAY_CHILDREN &&
         // skip if element has innerHTML / textContent
+        // 如果元素有 innerHTML / textContent 则跳过
         !(props && (props.innerHTML || props.textContent))
       ) {
         let next = hydrateChildren(
@@ -445,6 +472,7 @@ export function createHydrationFunctions(
           }
 
           // The SSRed DOM contains more nodes than it should. Remove them.
+          // SSR 的 DOM 包含的节点比预期的多。移除它们。
           const cur = next
           next = next.nextSibling
           remove(cur)
@@ -453,6 +481,8 @@ export function createHydrationFunctions(
         // #11873 the HTML parser will "eat" the first newline when parsing
         // <pre> and <textarea>, so if the client value starts with a newline,
         // we need to remove it before comparing
+        // #11873 HTML 解析器在解析 <pre> 和 <textarea> 时会“吃掉”第一个换行符，
+        // 所以如果客户端值以换行符开头，我们需要在比较之前将其删除
         let clientText = vnode.children as string
         if (
           clientText[0] === '\n' &&
@@ -464,6 +494,7 @@ export function createHydrationFunctions(
         if (
           textContent !== clientText &&
           // innerHTML normalize \r\n or \r into a single \n in the DOM
+          // innerHTML 将 \r\n 或 \r 规范化为 DOM 中的单个 \n
           textContent !== clientText.replace(/\r\n|\r/g, '\n')
         ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
@@ -496,6 +527,8 @@ export function createHydrationFunctions(
               (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               // #11189 skip if this node has directives that have created hooks
               // as it could have mutated the DOM in any possible way
+              // #11189 如果此节点具有已创建钩子的指令，则跳过
+              // 因为它可能以任何可能的方式改变了 DOM
               !(dirs && dirs.some(d => d.dir.created)) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
@@ -506,6 +539,7 @@ export function createHydrationFunctions(
                 (key.endsWith('value') || key === 'indeterminate')) ||
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
+              // 强制激活带有 .prop 修饰符的 v-bind
               key[0] === '.' ||
               (isCustomElement && !isReservedProp(key))
             ) {
@@ -515,6 +549,7 @@ export function createHydrationFunctions(
         } else if (props.onClick) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
+          // 点击监听器的快速路径（这是最常见的情况），以避免遍历 props。
           patchProp(
             el,
             'onClick',
@@ -527,6 +562,8 @@ export function createHydrationFunctions(
           // #11372: object style values are iterated during patch instead of
           // render/normalization phase, but style patch is skipped during
           // hydration, so we need to force iterate the object to track deps
+          // #11372: 对象样式值在 patch 期间而不是渲染/规范化阶段进行迭代，
+          // 但是在 hydration 期间跳过了样式 patch，所以我们需要强制迭代对象以跟踪依赖关系
           for (const key in props.style) props.style[key]
         }
       }
@@ -579,9 +616,13 @@ export function createHydrationFunctions(
           // JSX-compiled fns, but on the client the browser parses only 1 text
           // node.
           // look ahead for next possible text vnode
+          // #7285 来自手动渲染函数或 JSX 编译函数的可能连续文本 vnode，
+          // 但在客户端，浏览器仅解析 1 个文本节点。
+          // 向前查找下一个可能的文本 vnode
           if (i + 1 < l && normalizeVNode(children[i + 1]).type === Text) {
             // create an extra TextNode on the client for the next vnode to
             // adopt
+            // 在客户端创建一个额外的 TextNode 供下一个 vnode 采用
             insert(
               createText(
                 (node as Text).data.slice((vnode.children as string).length),
@@ -603,6 +644,8 @@ export function createHydrationFunctions(
       } else if (isText && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
+        // #7215 为空文本节点创建一个 TextNode
+        // 因为服务器渲染的 HTML 不会包含文本节点
         insert((vnode.el = createText('')), container)
       } else {
         if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
@@ -621,6 +664,7 @@ export function createHydrationFunctions(
         }
 
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
+        // SSR 的 DOM 没有包含足够的节点。挂载缺失的节点。
         patch(
           null,
           vnode,
@@ -666,9 +710,12 @@ export function createHydrationFunctions(
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
       // back. This should have led to node/children mismatch warnings.
+      // 片段未成功激活，因为我们没有取回结束锚点。
+      // 这应该会导致节点/子节点不匹配警告。
       logMismatchError()
 
       // since the anchor is missing, we need to create one and insert it
+      // 由于锚点丢失，我们需要创建一个并插入它
       insert((vnode.anchor = createComment(`]`)), container, next)
       return next
     }
@@ -702,6 +749,7 @@ export function createHydrationFunctions(
 
     if (isFragment) {
       // remove excessive fragment nodes
+    // 移除多余的片段节点
       const end = locateClosingAnchor(node)
       while (true) {
         const next = nextSibling(node)
@@ -728,6 +776,7 @@ export function createHydrationFunctions(
       slotScopeIds,
     )
     // the component vnode's el should be updated when a mismatch occurs.
+    // 当发生不匹配时，组件 vnode 的 el 应该被更新。
     if (parentComponent) {
       parentComponent.vnode.el = vnode.el
       updateHOCHostEl(parentComponent, vnode.el)
@@ -736,6 +785,7 @@ export function createHydrationFunctions(
   }
 
   // looks ahead for a start and closing comment node
+  // 向前查找开始和结束注释节点
   const locateClosingAnchor = (
     node: Node | null,
     open = '[',
@@ -764,12 +814,14 @@ export function createHydrationFunctions(
     parentComponent: ComponentInternalInstance | null,
   ): void => {
     // replace node
+    // 替换节点
     const parentNode = oldNode.parentNode
     if (parentNode) {
       parentNode.replaceChild(newNode, oldNode)
     }
 
     // update vnode
+    // 更新 vnode
     let parent = parentComponent
     while (parent) {
       if (parent.vnode.el === oldNode) {
@@ -806,6 +858,8 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
+    // 类可能顺序不同，但这不影响层叠
+    // 所以我们只需要检查类列表是否包含相同的类。
     if (el.$cls) {
       actual = el.$cls
       delete el.$cls
@@ -819,6 +873,7 @@ function propHasMismatch(
     }
   } else if (key === 'style') {
     // style might be in different order, but that doesn't affect cascade
+    // 样式可能顺序不同，但这不影响层叠
     actual = el.getAttribute('style') || ''
     expected = isString(clientValue)
       ? clientValue
@@ -826,6 +881,7 @@ function propHasMismatch(
     const actualMap = toStyleMap(actual)
     const expectedMap = toStyleMap(expected)
     // If `v-show=false`, `display: 'none'` should be added to expected
+    // 如果 `v-show=false`，则应将 `display: 'none'` 添加到预期值中
     if (vnode.dirs) {
       for (const { dir, value } of vnode.dirs) {
         // @ts-expect-error only vShow has this internal name
@@ -858,6 +914,7 @@ function propHasMismatch(
         actual = el.getAttribute(key)
       } else if (key === 'value' && el.tagName === 'TEXTAREA') {
         // #10000 textarea.value can't be retrieved by `hasAttribute`
+        // #10000 textarea.value 无法通过 `hasAttribute` 检索
         actual = (el as HTMLTextAreaElement).value
       } else {
         actual = false
@@ -885,6 +942,7 @@ function propHasMismatch(
     if (__TEST__) {
       // during tests, log the full message in one single string for easier
       // debugging.
+      // 在测试期间，将完整消息记录在一个字符串中，以便于调试。
       warn(`${preSegment} ${el.tagName}${postSegment}`)
     } else {
       warn(preSegment, el, postSegment)
@@ -997,6 +1055,7 @@ function isMismatchAllowed(
   } else {
     const list = allowedAttr.split(',')
     // text is a subset of children
+    // 文本是子节点的子集
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }

@@ -82,6 +82,8 @@ const KeepAliveImpl: ComponentOptions = {
   // Marker for special handling inside the renderer. We are not using a ===
   // check directly on KeepAlive in the renderer, because importing it directly
   // would prevent it from being tree-shaken.
+  // 渲染器内部特殊处理的标记。我们不在渲染器中直接使用 === 检查 KeepAlive，
+  // 因为直接导入它会阻止 tree-shaking。
   __isKeepAlive: true,
 
   props: {
@@ -97,10 +99,16 @@ const KeepAliveImpl: ComponentOptions = {
     // and the KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
+    // KeepAlive 通过 ctx 与实例化的渲染器通信，
+    // 渲染器在 ctx 中传递其内部实现，
+    // 而 KeepAlive 实例暴露 activate/deactivate 实现。
+    // 这样做的全部目的是避免在渲染器中直接导入 KeepAlive，以促进 tree-shaking。
     const sharedContext = instance.ctx as KeepAliveContext
 
     // if the internal renderer is not registered, it indicates that this is server-side rendering,
     // for KeepAlive, we just need to render its children
+    // 如果内部渲染器未注册，说明是服务端渲染，
+    // 对于 KeepAlive，我们只需要渲染其子节点
     if (__SSR__ && !sharedContext.renderer) {
       return () => {
         const children = slots.default && slots.default()
@@ -128,6 +136,7 @@ const KeepAliveImpl: ComponentOptions = {
     } = sharedContext
     const storageContainer = createElement('div')
 
+    // 注入 activate 方法，当组件被激活时调用
     sharedContext.activate = (
       vnode,
       container,
@@ -138,6 +147,7 @@ const KeepAliveImpl: ComponentOptions = {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
+      // 以防 props 发生变化
       patch(
         instance.vnode,
         vnode,
@@ -162,10 +172,12 @@ const KeepAliveImpl: ComponentOptions = {
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
+        // 更新组件树
         devtoolsComponentAdded(instance)
       }
     }
 
+    // 注入 deactivate 方法，当组件被缓存（失活）时调用
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
       invalidateMount(instance.m)
@@ -185,10 +197,12 @@ const KeepAliveImpl: ComponentOptions = {
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
+        // 更新组件树
         devtoolsComponentAdded(instance)
       }
 
       // for e2e test
+      // 用于 e2e 测试
       if (__DEV__ && __BROWSER__) {
         ;(instance as any).__keepAliveStorageContainer = storageContainer
       }
@@ -196,6 +210,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted
+      // 重置 shapeFlag 以便正确卸载
       resetShapeFlag(vnode)
       _unmount(vnode, instance, parentSuspense, true)
     }
@@ -204,6 +219,7 @@ const KeepAliveImpl: ComponentOptions = {
       cache.forEach((vnode, key) => {
         // for async components, name check should be based in its loaded
         // inner component if available
+        // 对于异步组件，名称检查应基于其加载的内部组件（如果可用）
         const name = getComponentName(
           isAsyncWrapper(vnode)
             ? (vnode.type as ComponentOptions).__asyncResolved || {}
@@ -222,6 +238,8 @@ const KeepAliveImpl: ComponentOptions = {
       } else if (current) {
         // current active instance should no longer be kept-alive.
         // we can't unmount it now but it might be later, so reset its flag now.
+        // 当前激活的实例不应再被缓存。
+        // 我们现在不能卸载它，但稍后可能会卸载，所以现在重置它的标志。
         resetShapeFlag(current)
       }
       cache.delete(key)
@@ -229,6 +247,7 @@ const KeepAliveImpl: ComponentOptions = {
     }
 
     // prune cache on include/exclude prop change
+    // include/exclude prop 变化时修剪缓存
     watch(
       () => [props.include, props.exclude],
       ([include, exclude]) => {
@@ -236,16 +255,21 @@ const KeepAliveImpl: ComponentOptions = {
         exclude && pruneCache(name => !matches(exclude, name))
       },
       // prune post-render after `current` has been updated
+      // 在 `current` 更新后的 post-render 阶段修剪
       { flush: 'post', deep: true },
     )
 
     // cache sub tree after render
+    // 渲染后缓存子树
     let pendingCacheKey: CacheKey | null = null
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
+      // 修复 #1621，pendingCacheKey 可能为 0
       if (pendingCacheKey != null) {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
+        // 如果 KeepAlive 的子节点是 Suspense，它需要在 Suspense 解析后缓存
+        // 避免缓存未挂载的 vnode
         if (isSuspense(instance.subTree.type)) {
           queuePostRenderEffect(() => {
             cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
@@ -264,8 +288,10 @@ const KeepAliveImpl: ComponentOptions = {
         const vnode = getInnerChild(subTree)
         if (cached.type === vnode.type && cached.key === vnode.key) {
           // current instance will be unmounted as part of keep-alive's unmount
+          // 当前实例将作为 keep-alive 卸载的一部分被卸载
           resetShapeFlag(vnode)
           // but invoke its deactivated hook here
+          // 但在此处调用其 deactivated 钩子
           const da = vnode.component!.da
           da && queuePostRenderEffect(da, suspense)
           return
@@ -300,6 +326,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       let vnode = getInnerChild(rawVNode)
       // #6028 Suspense ssContent maybe a comment VNode, should avoid caching it
+      // #6028 Suspense ssContent 可能是注释 VNode，应避免缓存它
       if (vnode.type === Comment) {
         current = null
         return vnode
@@ -309,6 +336,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       // for async components, name check should be based in its loaded
       // inner component if available
+      // 对于异步组件，名称检查应基于其加载的内部组件（如果可用）
       const name = getComponentName(
         isAsyncWrapper(vnode)
           ? (vnode.type as ComponentOptions).__asyncResolved || {}
@@ -331,6 +359,7 @@ const KeepAliveImpl: ComponentOptions = {
       const cachedVNode = cache.get(key)
 
       // clone vnode if it's reused because we are going to mutate it
+      // 如果 vnode 被复用，则克隆它，因为我们要修改它
       if (vnode.el) {
         vnode = cloneVNode(vnode)
         if (rawVNode.shapeFlag & ShapeFlags.SUSPENSE) {
@@ -342,29 +371,39 @@ const KeepAliveImpl: ComponentOptions = {
       // that is mounted. Instead of caching it directly, we store the pending
       // key and cache `instance.subTree` (the normalized vnode) in
       // mounted/updated hooks.
+      // #1511 返回的 vnode 可能因 attr fallthrough 或 scopeId 被克隆，
+      // 所以这里的 vnode 可能不是最终挂载的 vnode。
+      // 我们不直接缓存它，而是存储待处理的 key，
+      // 并在 mounted/updated 钩子中缓存 `instance.subTree`（规范化的 vnode）。
       pendingCacheKey = key
 
       if (cachedVNode) {
         // copy over mounted state
+        // 复制挂载状态
         vnode.el = cachedVNode.el
         vnode.component = cachedVNode.component
         if (vnode.transition) {
           // recursively update transition hooks on subTree
+          // 递归更新子树上的 transition 钩子
           setTransitionHooks(vnode, vnode.transition!)
         }
         // avoid vnode being mounted as fresh
+        // 避免 vnode 被当作新节点挂载
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
         // make this key the freshest
+        // 使此 key 成为最新的（LRU 更新）
         keys.delete(key)
         keys.add(key)
       } else {
         keys.add(key)
         // prune oldest entry
+        // 修剪最旧的条目
         if (max && keys.size > parseInt(max as string, 10)) {
           pruneCacheEntry(keys.values().next().value!)
         }
       }
       // avoid vnode being unmounted
+      // 避免 vnode 被卸载
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
@@ -380,6 +419,8 @@ const decorate = (t: typeof KeepAliveImpl) => {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
+// 导出公共类型以供 h/tsx 推断
+// 也为了避免在生成的 d.ts 文件中使用内联 import()
 export const KeepAlive = (__COMPAT__
   ? /*@__PURE__*/ decorate(KeepAliveImpl)
   : KeepAliveImpl) as any as {
@@ -427,10 +468,13 @@ function registerKeepAliveHook(
   // cache the deactivate branch check wrapper for injected hooks so the same
   // hook can be properly deduped by the scheduler. "__wdc" stands for "with
   // deactivation check".
+  // 缓存注入钩子的 deactivate 分支检查包装器，以便调度器可以正确地去重。
+  // "__wdc" 代表 "with deactivation check"（带停用检查）。
   const wrappedHook =
     hook.__wdc ||
     (hook.__wdc = () => {
       // only fire the hook if the target instance is NOT in a deactivated branch.
+      // 仅当目标实例不在 deactivated 分支中时才触发钩子。
       let current: ComponentInternalInstance | null = target
       while (current) {
         if (current.isDeactivated) {
@@ -446,6 +490,8 @@ function registerKeepAliveHook(
   // This avoids the need to walk the entire component tree when invoking these
   // hooks, and more importantly, avoids the need to track child components in
   // arrays.
+  // 除了在目标实例上注册外，我们还向上遍历父链，并在所有是 keep-alive 根的祖先实例上注册它。
+  // 这避免了在调用这些钩子时遍历整个组件树，更重要的是，避免了在数组中跟踪子组件。
   if (target) {
     let current = target.parent
     while (current && current.parent) {
@@ -465,6 +511,7 @@ function injectToKeepAliveRoot(
 ) {
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.
+  // injectHook 包装了原始函数以进行错误处理，因此请确保移除包装后的版本。
   const injected = injectHook(type, hook, keepAliveRoot, true /* prepend */)
   onUnmounted(() => {
     remove(keepAliveRoot[type]!, injected)
@@ -473,6 +520,7 @@ function injectToKeepAliveRoot(
 
 function resetShapeFlag(vnode: VNode) {
   // bitwise operations to remove keep alive flags
+  // 位运算移除 keep alive 标志
   vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   vnode.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
 }

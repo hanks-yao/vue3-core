@@ -36,11 +36,17 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   // The transition hooks are injected, but will be skipped by the renderer.
   // Instead, a custom directive can control the transition by calling the
   // injected hooks (e.g. v-show).
+  // 如果为 true，表示这是一个实际上不插入/移除元素的过渡，
+  // 而是切换显示/隐藏状态。
+  // 过渡钩子会被注入，但会被渲染器跳过。
+  // 相反，自定义指令可以通过调用注入的钩子来控制过渡（例如 v-show）。
   persisted?: boolean
 
   // Hooks. Using camel case for easier usage in render functions & JSX.
   // In templates these can be written as @before-enter="xxx" as prop names
   // are camelized.
+  // 钩子。使用驼峰命名法以便在渲染函数和 JSX 中更易使用。
+  // 在模板中，这些可以写成 @before-enter="xxx"，因为 prop 名称会被驼峰化。
   onBeforeEnter?: Hook<(el: HostElement) => void>
   onEnter?: Hook<(el: HostElement, done: () => void) => void>
   onAfterEnter?: Hook<(el: HostElement) => void>
@@ -49,7 +55,7 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onBeforeLeave?: Hook<(el: HostElement) => void>
   onLeave?: Hook<(el: HostElement, done: () => void) => void>
   onAfterLeave?: Hook<(el: HostElement) => void>
-  onLeaveCancelled?: Hook<(el: HostElement) => void> // only fired in persisted mode
+  onLeaveCancelled?: Hook<(el: HostElement) => void> // only fired in persisted mode // 仅在持久模式下触发
   // appear
   onBeforeAppear?: Hook<(el: HostElement) => void>
   onAppear?: Hook<(el: HostElement, done: () => void) => void>
@@ -87,6 +93,8 @@ export interface TransitionState {
   isUnmounting: boolean
   // Track pending leave callbacks for children of the same key.
   // This is used to force remove leaving a child when a new copy is entering.
+  // 跟踪具有相同 key 的子节点的待处理离开回调。
+  // 这用于在通过新副本进入时强制移除正在离开的子节点。
   leavingVNodes: Map<any, Record<string, VNode>>
 }
 
@@ -94,6 +102,8 @@ export interface TransitionElement {
   // in persisted mode (e.g. v-show), the same element is toggled, so the
   // pending enter/leave callbacks may need to be cancelled if the state is toggled
   // before it finishes.
+  // 在持久模式（例如 v-show）中，同一个元素被切换，
+  // 因此如果在完成之前状态被切换，可能需要取消待处理的进入/离开回调。
   [enterCbKey]?: PendingCallback
   [leaveCbKey]?: PendingCallback
 }
@@ -161,6 +171,7 @@ const BaseTransitionImpl: ComponentOptions = {
       const child: VNode = findNonCommentChild(children)
       // there's no need to track reactivity for these props so use the raw
       // props for a bit better perf
+      // 不需要跟踪这些 props 的响应性，所以使用原始 props 以获得更好的性能
       const rawProps = toRaw(props)
       const { mode } = rawProps
       // check mode
@@ -180,6 +191,8 @@ const BaseTransitionImpl: ComponentOptions = {
 
       // in the case of <transition><keep-alive/></transition>, we need to
       // compare the type of the kept-alive children.
+      // 在 <transition><keep-alive/></transition> 的情况下，我们需要
+      // 比较 keep-alive 子节点的类型。
       const innerChild = getInnerChild(child)
       if (!innerChild) {
         return emptyPlaceholder(child)
@@ -191,6 +204,7 @@ const BaseTransitionImpl: ComponentOptions = {
         state,
         instance,
         // #11061, ensure enterHooks is fresh after clone
+        // #11061, 确保克隆后 enterHooks 是新鲜的
         hooks => (enterHooks = hooks),
       )
 
@@ -214,15 +228,20 @@ const BaseTransitionImpl: ComponentOptions = {
           instance,
         )
         // update old tree's hooks in case of dynamic transition
+        // 更新旧树的钩子以防动态过渡
         setTransitionHooks(oldInnerChild, leavingHooks)
         // switching between different views
+        // 在不同视图之间切换
         if (mode === 'out-in' && innerChild.type !== Comment) {
           state.isLeaving = true
           // return placeholder node and queue update when leave finishes
+          // 返回占位符节点并在离开完成时排队更新
           leavingHooks.afterLeave = () => {
             state.isLeaving = false
             // #6835
             // it also needs to be updated when active is undefined
+            // #6835
+            // 当 active 为 undefined 时也需要更新
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
@@ -242,6 +261,7 @@ const BaseTransitionImpl: ComponentOptions = {
             )
             leavingVNodesCache[String(oldInnerChild!.key)] = oldInnerChild!
             // early removal callback
+            // 提前移除回调
             el[leaveCbKey] = () => {
               earlyRemove()
               el[leaveCbKey] = undefined
@@ -275,10 +295,12 @@ function findNonCommentChild(children: VNode[]): VNode {
   if (children.length > 1) {
     let hasFound = false
     // locate first non-comment child
+    // 定位第一个非注释子节点
     for (const c of children) {
       if (c.type !== Comment) {
         if (__DEV__ && hasFound) {
           // warn more than one non-comment child
+          // 警告超过一个非注释子节点
           warn(
             '<transition> can only be used on a single element or component. ' +
               'Use <transition-group> for lists.',
@@ -296,6 +318,8 @@ function findNonCommentChild(children: VNode[]): VNode {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
+// 导出公共类型用于 h/tsx 推断
+// 也为了避免在生成的 d.ts 文件中使用内联 import()
 export const BaseTransition = BaseTransitionImpl as unknown as {
   new (): {
     $props: BaseTransitionProps<any>
@@ -320,6 +344,8 @@ function getLeavingNodesForType(
 
 // The transition hooks are attached to the vnode as vnode.transition
 // and will be called at appropriate timing in the renderer.
+// 过渡钩子作为 vnode.transition 附加到 vnode 上
+// 并且将在渲染器的适当时机被调用。
 export function resolveTransitionHooks(
   vnode: VNode,
   props: BaseTransitionProps<any>,
@@ -383,10 +409,12 @@ export function resolveTransitionHooks(
         }
       }
       // for same element (v-show)
+      // 对于同一个元素 (v-show)
       if (el[leaveCbKey]) {
         el[leaveCbKey](true /* cancelled */)
       }
       // for toggled element with same key (v-if)
+      // 对于具有相同 key 的切换元素 (v-if)
       const leavingVNode = leavingVNodesCache[key]
       if (
         leavingVNode &&
@@ -394,6 +422,7 @@ export function resolveTransitionHooks(
         (leavingVNode.el as TransitionElement)[leaveCbKey]
       ) {
         // force early removal (not cancelled)
+        // 强制提前移除 (未取消)
         ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
       }
       callHook(hook, [el])
@@ -436,7 +465,7 @@ export function resolveTransitionHooks(
     leave(el, remove) {
       const key = String(vnode.key)
       if (el[enterCbKey]) {
-        el[enterCbKey](true /* cancelled */)
+        el[enterCbKey](true /* cancelled */) // 取消
       }
       if (state.isUnmounting) {
         return remove()
@@ -485,6 +514,9 @@ export function resolveTransitionHooks(
 // in the case of a KeepAlive in a leave phase we need to return a KeepAlive
 // placeholder with empty content to avoid the KeepAlive instance from being
 // unmounted.
+// 占位符实际上只处理一种特殊情况：KeepAlive
+// 在 KeepAlive 处于离开阶段的情况下，我们需要返回一个内容为空的 KeepAlive
+// 占位符，以避免 KeepAlive 实例被卸载。
 function emptyPlaceholder(vnode: VNode): VNode | undefined {
   if (isKeepAlive(vnode)) {
     vnode = cloneVNode(vnode)
@@ -502,6 +534,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
     return vnode
   }
   // #7121,#12465 get the component subtree if it's been mounted
+  // #7121,#12465 如果组件子树已挂载，则获取它
   if (vnode.component) {
     return vnode.component.subTree
   }
@@ -544,11 +577,13 @@ export function getTransitionRawChildren(
   for (let i = 0; i < children.length; i++) {
     let child = children[i]
     // #5360 inherit parent key in case of <template v-for>
+    // #5360 在 <template v-for> 的情况下继承父 key
     const key =
       parentKey == null
         ? child.key
         : String(parentKey) + String(child.key != null ? child.key : i)
     // handle fragment children case, e.g. v-for
+    // 处理片段子节点的情况，例如 v-for
     if (child.type === Fragment) {
       if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
       ret = ret.concat(
@@ -556,6 +591,7 @@ export function getTransitionRawChildren(
       )
     }
     // comment placeholders should be skipped, e.g. v-if
+    // 应跳过注释占位符，例如 v-if
     else if (keepComment || child.type !== Comment) {
       ret.push(key != null ? cloneVNode(child, { key }) : child)
     }
@@ -564,6 +600,10 @@ export function getTransitionRawChildren(
   // fragments will be merged into a flat children array. Since each v-for
   // fragment may contain different static bindings inside, we need to de-op
   // these children to force full diffs to ensure correct behavior.
+  // #1126 如果过渡子节点列表包含多个子片段，这些
+  // 片段将被合并为一个扁平的子节点数组。由于每个 v-for
+  // 片段内部可能包含不同的静态绑定，我们需要取消优化
+  // 这些子节点以强制进行完整 diff，从而确保正确的行为。
   if (keyedFragmentCount > 1) {
     for (let i = 0; i < ret.length; i++) {
       ret[i].patchFlag = PatchFlags.BAIL

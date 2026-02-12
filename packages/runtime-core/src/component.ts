@@ -87,6 +87,7 @@ import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
 
 // Augment GlobalComponents
+// 扩展全局组件
 import type { TeleportProps } from './components/Teleport'
 import type { SuspenseProps } from './components/Suspense'
 import type { KeepAliveProps } from './components/KeepAlive'
@@ -103,6 +104,10 @@ export type Data = Record<string, unknown>
  * Works with all valid component definition types. This is intended to replace
  * the usage of `InstanceType<typeof Comp>` which only works for
  * constructor-based component definition types.
+ *
+ * 用于提取组件实例类型的公共实用程序类型。
+ * 适用于所有有效的组件定义类型。这旨在取代 `InstanceType<typeof Comp>` 的用法，
+ * 后者仅适用于基于构造函数的组件定义类型。
  *
  * @example
  * ```ts
@@ -123,8 +128,10 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
         >
       ? PropsOrInstance extends { $props: unknown }
         ? // T is returned by `defineComponent()`
+          // T 是由 `defineComponent()` 返回的
           PropsOrInstance
         : // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+          // 注意我们覆盖 Props/RawBindings/D 以确保不是 `unknown`
           ComponentPublicInstance<
             unknown extends PropsOrInstance ? {} : PropsOrInstance,
             unknown extends RawBindings ? {} : RawBindings,
@@ -132,16 +139,20 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
             C,
             M
           >
-      : never // not a vue Component
+      : never // not a vue Component (不是 vue 组件)
 
 /**
  * For extending allowed non-declared props on components in TSX
+ * 用于在 TSX 中扩展组件上允许的未声明属性
  */
 export interface ComponentCustomProps {}
 
 /**
  * For globally defined Directives
  * Here is an example of adding a directive `VTooltip` as global directive:
+ *
+ * 用于全局定义的指令
+ * 这里是一个添加指令 `VTooltip` 作为全局指令的例子：
  *
  * @example
  * ```ts
@@ -159,6 +170,9 @@ export interface GlobalDirectives {}
 /**
  * For globally defined Components
  * Here is an example of adding a component `RouterView` as global component:
+ *
+ * 用于全局定义的组件
+ * 这里是一个添加组件 `RouterView` 作为全局组件的例子：
  *
  * @example
  * ```ts
@@ -180,6 +194,7 @@ export interface GlobalComponents {
 
 /**
  * Default allowed non-declared props on component in TSX
+ * TSX 中组件上默认允许的未声明属性
  */
 export interface AllowedComponentProps {
   class?: unknown
@@ -188,6 +203,7 @@ export interface AllowedComponentProps {
 
 // Note: can't mark this whole interface internal because some public interfaces
 // extend it.
+// 注意：不能将整个接口标记为 internal，因为一些公共接口扩展了它。
 export interface ComponentInternalOptions {
   /**
    * @internal
@@ -203,14 +219,17 @@ export interface ComponentInternalOptions {
   __hmrId?: string
   /**
    * Compat build only, for bailing out of certain compatibility behavior
+   * 仅兼容构建，用于退出某些兼容性行为
    */
   __isBuiltIn?: boolean
   /**
    * This one should be exposed so that devtools can make use of it
+   * 这个应该暴露出来，以便 devtools 可以利用它
    */
   __file?: string
   /**
    * name inferred from filename
+   * 从文件名推断的名称
    */
   __name?: string
 }
@@ -222,6 +241,7 @@ export interface FunctionalComponent<
   EE extends EmitsOptions = ShortEmitsToObject<E>,
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
+  // 这里使用 any 是故意的，以便它可以成为有效的 JSX 元素构造函数
   (
     props: P & EmitsToProps<EE>,
     ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>,
@@ -244,6 +264,10 @@ export interface ClassComponent {
  * object, or a function. Use this where the code expects to work with actual
  * values, e.g. checking if its a function or not. This is mostly for internal
  * implementation code.
+ *
+ * 具体组件类型匹配其实际值：它要么是一个选项对象，要么是一个函数。
+ * 在代码期望使用实际值的地方使用此类型，例如检查它是否为函数。
+ * 这主要用于内部实现代码。
  */
 export type ConcreteComponent<
   Props = {},
@@ -260,6 +284,9 @@ export type ConcreteComponent<
 /**
  * A type used in public APIs where a component type is expected.
  * The constructor type is an artificial type returned by defineComponent().
+ *
+ * 用于期望组件类型的公共 API 中的类型。
+ * 构造函数类型是 defineComponent() 返回的人工类型。
  */
 export type Component<
   PropsOrInstance = any,
@@ -278,6 +305,7 @@ export type { ComponentOptions }
 export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
+// 使用 `E extends any` 强制计算类型以修复 #2362
 export type SetupContext<
   E = EmitsOptions,
   S extends SlotsType = {},
@@ -300,21 +328,25 @@ export type InternalRenderFunction = {
     ctx: ComponentPublicInstance,
     cache: ComponentInternalInstance['renderCache'],
     // for compiler-optimized bindings
+    // 用于编译器优化的绑定
     $props: ComponentInternalInstance['props'],
     $setup: ComponentInternalInstance['setupState'],
     $data: ComponentInternalInstance['data'],
     $options: ComponentInternalInstance['ctx'],
   ): VNodeChild
-  _rc?: boolean // isRuntimeCompiled
+  _rc?: boolean // isRuntimeCompiled (是否运行时编译)
 
   // __COMPAT__ only
-  _compatChecked?: boolean // v3 and already checked for v2 compat
-  _compatWrapped?: boolean // is wrapped for v2 compat
+  // 仅 __COMPAT__
+  _compatChecked?: boolean // v3 and already checked for v2 compat (v3 且已检查 v2 兼容性)
+  _compatWrapped?: boolean // is wrapped for v2 compat (是否为 v2 兼容性包装)
 }
 
 /**
  * We expose a subset of properties on the internal instance as they are
  * useful for advanced external libraries and tools.
+ *
+ * 我们在内部实例上暴露了一部分属性，因为它们对高级外部库和工具很有用。
  */
 export interface ComponentInternalInstance {
   uid: number
@@ -324,41 +356,50 @@ export interface ComponentInternalInstance {
   appContext: AppContext
   /**
    * Vnode representing this component in its parent's vdom tree
+   * 代表此组件在其父级 vdom 树中的 Vnode
    */
   vnode: VNode
   /**
    * The pending new vnode from parent updates
+   * 来自父级更新的待处理新 vnode
    * @internal
    */
   next: VNode | null
   /**
    * Root vnode of this component's own vdom tree
+   * 此组件自身 vdom 树的根 vnode
    */
   subTree: VNode
   /**
    * Render effect instance
+   * 渲染 effect 实例
    */
   effect: ReactiveEffect
   /**
    * Force update render effect
+   * 强制更新渲染 effect
    */
   update: () => void
   /**
    * Render effect job to be passed to scheduler (checks if dirty)
+   * 传递给调度器的渲染 effect 任务（检查是否脏）
    */
   job: SchedulerJob
   /**
    * The render function that returns vdom tree.
+   * 返回 vdom 树的渲染函数。
    * @internal
    */
   render: InternalRenderFunction | null
   /**
    * SSR render function
+   * SSR 渲染函数
    * @internal
    */
   ssrRender?: Function | null
   /**
    * Object containing values this component provides for its descendants
+   * 包含此组件为其后代提供的值的对象
    * @internal
    */
   provides: Data
@@ -366,85 +407,105 @@ export interface ComponentInternalInstance {
    * for tracking useId()
    * first element is the current boundary prefix
    * second number is the index of the useId call within that boundary
+   * 用于跟踪 useId()
+   * 第一个元素是当前边界前缀
+   * 第二个数字是该边界内 useId 调用的索引
    * @internal
    */
   ids: [string, number, number]
   /**
    * Tracking reactive effects (e.g. watchers) associated with this component
    * so that they can be automatically stopped on component unmount
+   * 跟踪与此组件关联的响应式 effect（例如 watcher），
+   * 以便在组件卸载时自动停止它们
    * @internal
    */
   scope: EffectScope
   /**
    * cache for proxy access type to avoid hasOwnProperty calls
+   * 代理访问类型的缓存，以避免 hasOwnProperty 调用
    * @internal
    */
   accessCache: Data | null
   /**
    * cache for render function values that rely on _ctx but won't need updates
    * after initialized (e.g. inline handlers)
+   * 缓存依赖于 _ctx 但初始化后不需要更新的渲染函数值（例如内联处理程序）
    * @internal
    */
   renderCache: (Function | VNode | undefined)[]
 
   /**
    * Resolved component registry, only for components with mixins or extends
+   * 已解析的组件注册表，仅适用于具有 mixins 或 extends 的组件
    * @internal
    */
   components: Record<string, ConcreteComponent> | null
   /**
    * Resolved directive registry, only for components with mixins or extends
+   * 已解析的指令注册表，仅适用于具有 mixins 或 extends 的组件
    * @internal
    */
   directives: Record<string, Directive> | null
   /**
    * Resolved filters registry, v2 compat only
+   * 已解析的过滤器注册表，仅 v2 兼容
    * @internal
    */
   filters?: Record<string, Function>
   /**
    * resolved props options
+   * 已解析的 props 选项
    * @internal
    */
   propsOptions: NormalizedPropsOptions
   /**
    * resolved emits options
+   * 已解析的 emits 选项
    * @internal
    */
   emitsOptions: ObjectEmitsOptions | null
   /**
    * resolved inheritAttrs options
+   * 已解析的 inheritAttrs 选项
    * @internal
    */
   inheritAttrs?: boolean
   /**
    * Custom Element instance (if component is created by defineCustomElement)
+   * 自定义元素实例（如果组件是由 defineCustomElement 创建的）
    * @internal
    */
   ce?: ComponentCustomElementInterface
   /**
    * is custom element? (kept only for compatibility)
+   * 是自定义元素吗？（仅为兼容性保留）
    * @internal
    */
   isCE?: boolean
   /**
    * custom element specific HMR method
+   * 自定义元素特定的 HMR 方法
    * @internal
    */
   ceReload?: (newStyles?: string[]) => void
 
   // the rest are only for stateful components ---------------------------------
+  // 其余仅适用于有状态组件 ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
+  // 作为公共实例 (`this`) 的主代理
   proxy: ComponentPublicInstance | null
 
   // exposed properties via expose()
+  // 通过 expose() 暴露的属性
   exposed: Record<string, any> | null
   exposeProxy: Record<string, any> | null
 
   /**
    * alternative proxy used only for runtime-compiled render functions using
    * `with` block
+   * 仅用于使用 `with` 块的运行时编译渲染函数的替代代理
    * @internal
    */
   withProxy: ComponentPublicInstance | null
@@ -452,11 +513,14 @@ export interface ComponentInternalInstance {
    * This is the target for the public instance proxy. It also holds properties
    * injected by user options (computed, methods etc.) and user-attached
    * custom properties (via `this.x = ...`)
+   * 这是公共实例代理的目标。它还保存由用户选项注入的属性（computed, methods 等）
+   * 和用户附加的自定义属性（通过 `this.x = ...`）
    * @internal
    */
   ctx: Data
 
   // state
+  // 状态
   data: Data
   props: Data
   attrs: Data
@@ -466,22 +530,26 @@ export interface ComponentInternalInstance {
 
   /**
    * used for keeping track of .once event handlers on components
+   * 用于跟踪组件上的 .once 事件处理程序
    * @internal
    */
   emitted: Record<string, boolean> | null
   /**
    * used for caching the value returned from props default factory functions to
    * avoid unnecessary watcher trigger
+   * 用于缓存从 props 默认工厂函数返回的值，以避免不必要的 watcher 触发
    * @internal
    */
   propsDefaults: Data
   /**
    * setup related
+   * setup 相关
    * @internal
    */
   setupState: Data
   /**
    * devtools access to additional info
+   * devtools 访问额外信息
    * @internal
    */
   devtoolsRawSetupState?: any
@@ -492,11 +560,13 @@ export interface ComponentInternalInstance {
 
   /**
    * suspense related
+   * suspense 相关
    * @internal
    */
   suspense: SuspenseBoundary | null
   /**
    * suspense pending batch id
+   * suspense 待处理批次 id
    * @internal
    */
   suspenseId: number
@@ -510,6 +580,7 @@ export interface ComponentInternalInstance {
   asyncResolved: boolean
 
   // lifecycle
+  // 生命周期
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
@@ -572,29 +643,34 @@ export interface ComponentInternalInstance {
 
   /**
    * For caching bound $forceUpdate on public proxy access
+   * 用于在公共代理访问上缓存绑定的 $forceUpdate
    * @internal
    */
   f?: () => void
   /**
    * For caching bound $nextTick on public proxy access
+   * 用于在公共代理访问上缓存绑定的 $nextTick
    * @internal
    */
   n?: () => Promise<void>
   /**
    * `updateTeleportCssVars`
    * For updating css vars on contained teleports
+   * 用于更新包含的 teleports 上的 css 变量
    * @internal
    */
   ut?: (vars?: Record<string, unknown>) => void
 
   /**
    * dev only. For style v-bind hydration mismatch checks
+   * 仅开发环境。用于 style v-bind hydration 不匹配检查
    * @internal
    */
   getCssVars?: () => Record<string, unknown>
 
   /**
    * v2 compat only, for caching mutated $options
+   * 仅 v2 兼容，用于缓存突变的 $options
    * @internal
    */
   resolvedOptions?: MergedComponentOptions
@@ -611,6 +687,7 @@ export function createComponentInstance(
 ): ComponentInternalInstance {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
+  // 继承父应用程序上下文 - 或者 - 如果是根节点，则从根 vnode 采用
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
@@ -620,11 +697,11 @@ export function createComponentInstance(
     type,
     parent,
     appContext,
-    root: null!, // to be immediately set
+    root: null!, // to be immediately set (将立即设置)
     next: null,
-    subTree: null!, // will be set synchronously right after creation
+    subTree: null!, // will be set synchronously right after creation (将在创建后立即同步设置)
     effect: null!,
-    update: null!, // will be set synchronously right after creation
+    update: null!, // will be set synchronously right after creation (将在创建后立即同步设置)
     job: null!,
     scope: new EffectScope(true /* detached */),
     render: null,
@@ -639,24 +716,28 @@ export function createComponentInstance(
     renderCache: [],
 
     // local resolved assets
+    // 本地解析的资产
     components: null,
     directives: null,
 
     // resolved props and emits options
+    // 已解析的 props 和 emits 选项
     propsOptions: normalizePropsOptions(type, appContext),
     emitsOptions: normalizeEmitsOptions(type, appContext),
 
     // emit
-    emit: null!, // to be set immediately
+    emit: null!, // to be set immediately (将立即设置)
     emitted: null,
 
     // props default value
+    // props 默认值
     propsDefaults: EMPTY_OBJ,
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
 
     // state
+    // 状态
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
@@ -667,6 +748,7 @@ export function createComponentInstance(
     setupContext: null,
 
     // suspense related
+    // suspense 相关
     suspense,
     suspenseId: suspense ? suspense.pendingId : 0,
     asyncDep: null,
@@ -674,6 +756,8 @@ export function createComponentInstance(
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
+    // 生命周期钩子
+    // 这里不使用枚举，因为它会导致计算属性
     isMounted: false,
     isUnmounted: false,
     isDeactivated: false,
@@ -701,6 +785,7 @@ export function createComponentInstance(
   instance.emit = emit.bind(null, instance)
 
   // apply custom element special handling
+  // 应用自定义元素特殊处理
   if (vnode.ce) {
     vnode.ce(instance)
   }
@@ -729,6 +814,14 @@ let setInSSRSetupState: (state: boolean) => void
  * for effectScope and global reactive dependency maps. However, it does make
  * some of the most common cases work. It also warns if the duplication is
  * found during browser execution.
+ *
+ * 以下内容使 getCurrentInstance() 在 Vue 的多个副本中工作。
+ * #7590 中总结了一些可能发生这种情况的情况。原则上应避免重复，
+ * 但在实践中，用户通常无法自行解决，特别是在复杂的 SSR 设置中。
+ *
+ * 注意，此修复在技术上是不完整的，因为我们仍然依赖其他单例
+ * 用于 effectScope 和全局响应式依赖映射。但是，它确实使一些最常见的情况得以工作。
+ * 如果在浏览器执行期间发现重复，它也会发出警告。
  */
 if (__SSR__) {
   type Setter = (v: any) => void
@@ -750,6 +843,9 @@ if (__SSR__) {
   // this is needed in the SFC playground when SSRing async components, since
   // we have to load both the runtime and the server-renderer from CDNs, they
   // contain duplicated copies of Vue runtime code.
+  // 也让 `isInSSRComponentSetup` 在 Vue 的副本之间共享。
+  // 在 SFC playground 中 SSR 异步组件时需要这样做，因为
+  // 我们必须从 CDN 加载运行时和服务器渲染器，它们包含 Vue 运行时代码的重复副本。
   setInSSRSetupState = registerGlobalSetter(
     `__VUE_SSR_SETTERS__`,
     v => (isInSSRComponentSetup = v),
@@ -850,13 +946,16 @@ function setupStatefulComponent(
     }
   }
   // 0. create render proxy property access cache
+  // 0. 创建渲染代理属性访问缓存
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
+  // 1. 创建公共实例 / 渲染代理
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
   // 2. call setup()
+  // 2. 调用 setup()
   const { setup } = Component
   if (setup) {
     pauseTracking()
@@ -878,6 +977,7 @@ function setupStatefulComponent(
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
+      // 异步 setup / serverPrefetch，标记为 useId() 的异步边界
       markAsyncBoundary(instance)
     }
 
@@ -885,6 +985,7 @@ function setupStatefulComponent(
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
+        // 返回 promise 以便 server-renderer 可以等待它
         return setupResult
           .then((resolvedResult: unknown) => {
             handleSetupResult(instance, resolvedResult, isSSR)
@@ -895,6 +996,8 @@ function setupStatefulComponent(
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.
+        // 异步 setup 返回 Promise。
+        // 在此退出并等待重新进入。
         instance.asyncDep = setupResult
         if (__DEV__ && !instance.suspense) {
           const name = formatComponentName(instance, Component)
@@ -926,9 +1029,12 @@ export function handleSetupResult(
 ): void {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
+    // setup 返回了一个内联渲染函数
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
+      // 当函数名为 `ssrRender`（由 SFC 内联模式编译）时，
+      // 将其设置为 ssrRender。
       instance.ssrRender = setupResult
     } else {
       instance.render = setupResult as InternalRenderFunction
@@ -942,6 +1048,8 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
+    // setup 返回了绑定。
+    // 假设存在从模板编译的渲染函数。
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
@@ -970,6 +1078,9 @@ let installWithProxy: (i: ComponentInternalInstance) => void
 /**
  * For runtime-dom to register the compiler.
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
+ *
+ * 用于 runtime-dom 注册编译器。
+ * 注意导出的方法使用 any 以避免 d.ts 依赖于编译器类型。
  */
 export function registerRuntimeCompiler(_compile: any): void {
   compile = _compile
@@ -1000,9 +1111,12 @@ export function finishComponentSetup(
 
   // template / render function normalization
   // could be already set when returned from setup()
+  // 模板 / 渲染函数标准化
+  // 可能在从 setup() 返回时已经设置
   if (!instance.render) {
     // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
     // is done by server-renderer
+    // 仅在非 SSR 时进行即时编译 - SSR 即时编译由 server-renderer 完成
     if (!isSSR && compile && !Component.render) {
       const template =
         (__COMPAT__ &&
@@ -1029,6 +1143,7 @@ export function finishComponentSetup(
         )
         if (__COMPAT__) {
           // pass runtime compat config into the compiler
+          // 将运行时兼容配置传递给编译器
           finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
           if (Component.compatConfig) {
             // @ts-expect-error types are not compatible
@@ -1047,12 +1162,15 @@ export function finishComponentSetup(
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and
     // also only allows a whitelist of globals to fallthrough.
+    // 对于使用 `with` 块的运行时编译渲染函数，使用的渲染代理需要一个不同的 `has` 处理程序，
+    // 它性能更高，并且只允许白名单中的全局变量通过。
     if (installWithProxy) {
       installWithProxy(instance)
     }
   }
 
   // support for 2.x options
+  // 支持 2.x 选项
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     const reset = setCurrentInstance(instance)
     pauseTracking()
@@ -1066,6 +1184,8 @@ export function finishComponentSetup(
 
   // warn missing template/render
   // the runtime compilation of template in SSR is done by server-render
+  // 警告缺少 template/render
+  // SSR 中模板的运行时编译由 server-render 完成
   if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
     if (!compile && Component.template) {
       /* v8 ignore start */
@@ -1152,6 +1272,8 @@ export function createSetupContext(
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
+    // 我们在开发环境中使用 getters，以防像 test-utils 这样的库覆盖实例属性
+    // (不应在生产环境中进行覆盖)
     let attrsProxy: Data
     let slotsProxy: Slots
     return Object.freeze({
@@ -1231,6 +1353,7 @@ export function formatComponentName(
 
   if (!name && instance) {
     // try to infer the name based on reverse resolution
+    // 尝试基于反向解析推断名称
     const inferFromRegistry = (
       registry: Record<string, any> | undefined | null,
     ) => {
@@ -1288,10 +1411,12 @@ export interface ComponentCustomElementInterface {
   _endPatch(): void
   /**
    * @internal attached by the nested Teleport when shadowRoot is false.
+   * @internal 当 shadowRoot 为 false 时，由嵌套的 Teleport 附加。
    */
   _teleportTargets?: Set<RendererElement>
   /**
    * @internal check if shadow root is enabled
+   * @internal 检查是否启用了 shadow root
    */
   _hasShadowRoot(): boolean
 }

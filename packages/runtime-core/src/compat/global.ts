@@ -63,6 +63,9 @@ import type { LegacyPublicInstance } from './instance'
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
  * the default export is provided only for migration purposes. Please use
  * named imports instead - e.g. `import { createApp } from 'vue'`.
+ *
+ * @deprecated 默认的 `Vue` 导出在 Vue 3 中已被移除。默认导出的类型仅用于迁移目的。
+ * 请改用命名导入 - 例如 `import { createApp } from 'vue'`。
  */
 export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   configureCompat: typeof configureCompat
@@ -70,6 +73,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   // no inference here since these types are not meant for actual use - they
   // are merely here to provide type checks for internal implementation and
   // information for migration.
+  // 此处没有推断，因为这些类型不用于实际使用 - 它们仅用于为内部实现提供类型检查和迁移信息。
   new (options?: ComponentOptions): LegacyPublicInstance
 
   version: string
@@ -97,22 +101,27 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
   /**
    * @deprecated Vue 3 no longer supports extending constructors.
+   * @deprecated Vue 3 不再支持扩展构造函数。
    */
   extend: (options?: ComponentOptions) => CompatVue
   /**
    * @deprecated Vue 3 no longer needs set() for adding new properties.
+   * @deprecated Vue 3 不再需要 set() 来添加新属性。
    */
   set(target: any, key: PropertyKey, value: any): void
   /**
    * @deprecated Vue 3 no longer needs delete() for property deletions.
+   * @deprecated Vue 3 不再需要 delete() 来删除属性。
    */
   delete(target: any, key: PropertyKey): void
   /**
    * @deprecated use `reactive` instead.
+   * @deprecated 请改用 `reactive`。
    */
   observable: typeof reactive
   /**
    * @deprecated filters have been removed from Vue 3.
+   * @deprecated 过滤器已从 Vue 3 中移除。
    */
   filter(name: string, arg?: any): null
   /**
@@ -136,10 +145,12 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 export let isCopyingConfig = false
 
 // exported only for test
+// 仅导出用于测试
 export let singletonApp: App
 let singletonCtor: CompatVue
 
 // Legacy global Vue constructor
+// 遗留的全局 Vue 构造函数
 export function createCompatVue(
   createApp: CreateAppFunction<Element>,
   createSingletonApp: CreateAppFunction<Element>,
@@ -253,6 +264,7 @@ export function createCompatVue(
 
     // clone non-primitive base option values for edge case of mutating
     // extended options
+    // 克隆非原始基类选项值，以处理修改扩展选项的边缘情况
     const mergeBase: any = {}
     for (const key in Super.options) {
       const superValue = Super.options[key]
@@ -306,6 +318,7 @@ export function createCompatVue(
   }) as any
 
   // internal utils - these are technically internal but some plugins use it.
+  // 内部工具 - 这些在技术上是内部的，但一些插件使用了它们。
   const util = {
     warn: __DEV__ ? warn : NOOP,
     extend,
@@ -340,6 +353,7 @@ export function installAppCompatProperties(
   if (!singletonApp) {
     // this is the call of creating the singleton itself so the rest is
     // unnecessary
+    // 这是创建单例本身的调用，所以其余部分是不必要的
     return
   }
 
@@ -366,8 +380,10 @@ function installFilterMethod(app: App, context: AppContext) {
 
 function installLegacyAPIs(app: App) {
   // expose global API on app instance for legacy plugins
+  // 在 app 实例上暴露全局 API，以供遗留插件使用
   Object.defineProperties(app, {
     // so that app.use() can work with legacy plugins that extend prototypes
+    // 这样 app.use() 就可以与扩展原型的遗留插件一起工作
     prototype: {
       get() {
         __DEV__ && warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE, null)
@@ -389,6 +405,7 @@ function installLegacyAPIs(app: App) {
 
 function applySingletonAppMutations(app: App) {
   // copy over asset registries and deopt flag
+  // 复制资产注册表和 deopt 标志
   app._context.mixins = [...singletonApp._context.mixins]
   ;['components', 'directives', 'filters'].forEach(key => {
     // @ts-expect-error
@@ -396,6 +413,7 @@ function applySingletonAppMutations(app: App) {
   })
 
   // copy over global config mutations
+  // 复制全局配置变更
   isCopyingConfig = true
   for (const key in singletonApp.config) {
     if (key === 'isNativeTag') continue
@@ -410,6 +428,7 @@ function applySingletonAppMutations(app: App) {
     app.config[key] = isObject(val) ? Object.create(val) : val
 
     // compat for runtime ignoredElements -> isCustomElement
+    // 运行时 ignoredElements -> isCustomElement 的兼容性
     if (
       key === 'ignoredElements' &&
       isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS, null) &&
@@ -427,6 +446,7 @@ function applySingletonAppMutations(app: App) {
 
 function applySingletonPrototype(app: App, Ctor: Function) {
   // copy prototype augmentations as config.globalProperties
+  // 将原型增强复制为 config.globalProperties
   const enabled = isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)
   if (enabled) {
     app.config.globalProperties = Object.create(Ctor.prototype)
@@ -460,6 +480,8 @@ function installCompatMount(
    * Vue 2 supports the behavior of creating a component instance but not
    * mounting it, which is no longer possible in Vue 3 - this internal
    * function simulates that behavior.
+   *
+   * Vue 2 支持创建组件实例但不挂载它的行为，这在 Vue 3 中不再可能 - 这个内部函数模拟了该行为。
    */
   app._createRoot = options => {
     const component = app._component
@@ -471,9 +493,11 @@ function installCompatMount(
     const emptyRender = () => {}
 
     // create root instance
+    // 创建根实例
     const instance = createComponentInstance(vnode, null, null)
     // suppress "missing render fn" warning since it can't be determined
     // until $mount is called
+    // 抑制“缺少渲染函数”警告，因为直到调用 $mount 才能确定
     if (hasNoRender) {
       instance.render = emptyRender
     }
@@ -487,6 +511,8 @@ function installCompatMount(
     // Note: the following assumes DOM environment since the compat build
     // only targets web. It essentially includes logic for app.mount from
     // both runtime-core AND runtime-dom.
+    // 这些定义在 ctx 上，并由实例代理上的 $mount/$destroy 公共属性 getter 获取。
+    // 注意：以下假设 DOM 环境，因为兼容构建仅针对 web。它本质上包含了来自 runtime-core 和 runtime-dom 的 app.mount 逻辑。
     instance.ctx._compat_mount = (selectorOrEl?: string | Element) => {
       if (isMounted) {
         __DEV__ && warn(`Root instance is already mounted.`)
@@ -519,10 +545,12 @@ function installCompatMount(
         namespace = 'mathml'
 
       // HMR root reload
+      // HMR 根重载
       if (__DEV__) {
         context.reload = () => {
           const cloned = cloneVNode(vnode)
           // compat mode will use instance if not reset to null
+          // 如果不重置为 null，兼容模式将使用实例
           cloned.component = null
           render(cloned, container, namespace)
         }
@@ -531,8 +559,10 @@ function installCompatMount(
       // resolve in-DOM template if component did not provide render
       // and no setup/mixin render functions are provided (by checking
       // that the instance is still using the placeholder render fn)
+      // 如果组件未提供渲染函数，并且未提供 setup/mixin 渲染函数（通过检查实例是否仍在使用占位符渲染函数），则解析 DOM 内模板
       if (hasNoRender && instance.render === emptyRender) {
         // root directives check
+        // 根指令检查
         if (__DEV__) {
           for (let i = 0; i < container.attributes.length; i++) {
             const attr = container.attributes[i]
@@ -548,6 +578,7 @@ function installCompatMount(
       }
 
       // clear content before mounting
+      // 挂载前清除内容
       container.textContent = ''
 
       // TODO hydration
@@ -561,6 +592,7 @@ function installCompatMount(
       isMounted = true
       app._container = container
       // for devtools and telemetry
+      // 用于 devtools 和遥测
       ;(container as any).__vue_app__ = app
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         devtoolsInitApp(app, version)
@@ -579,6 +611,7 @@ function installCompatMount(
       } else {
         const { bum, scope, um } = instance
         // beforeDestroy hooks
+        // beforeDestroy 钩子
         if (bum) {
           invokeArrayFns(bum)
         }
@@ -586,10 +619,12 @@ function installCompatMount(
           instance.emit('hook:beforeDestroy')
         }
         // stop effects
+        // 停止副作用
         if (scope) {
           scope.stop()
         }
         // unmounted hook
+        // unmounted 钩子
         if (um) {
           invokeArrayFns(um)
         }
@@ -619,6 +654,7 @@ function defineReactive(obj: any, key: string, val: any) {
   // it's possible for the original object to be mutated after being defined
   // and expecting reactivity... we are covering it here because this seems to
   // be a bit more common.
+  // 原始对象在被定义并期望响应性之后可能会发生突变...我们在这里覆盖它，因为这似乎更常见。
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {
     const reactiveVal = reactive(val)
     if (isArray(val)) {
@@ -639,6 +675,7 @@ function defineReactive(obj: any, key: string, val: any) {
   const i = obj.$
   if (i && obj === i.proxy) {
     // target is a Vue instance - define on instance.ctx
+    // 目标是 Vue 实例 - 在 instance.ctx 上定义
     defineReactiveSimple(i.ctx, key, val)
     i.accessCache = Object.create(null)
   } else if (isReactive(obj)) {

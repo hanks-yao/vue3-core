@@ -89,11 +89,14 @@ export interface App<HostElement = any> {
    * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
    * to variables provided via `app.provide()`.
    *
+   * 以 app 为活动实例运行函数。这允许在函数内部使用 `inject()` 来访问通过 `app.provide()` 提供的变量。
+   *
    * @param fn - function to run with the app as active instance
    */
   runWithContext<T>(fn: () => T): T
 
   // internal, but we need to expose these for the server-renderer and devtools
+  // 内部属性，但我们需要将这些暴露给 server-renderer 和 devtools
   _uid: number
   _component: ConcreteComponent
   _props: Data | null
@@ -103,17 +106,20 @@ export interface App<HostElement = any> {
 
   /**
    * @internal custom element vnode
+   * @internal 自定义元素 vnode
    */
   _ceVNode?: VNode
 
   /**
    * v2 compat only
+   * 仅 v2 兼容
    */
   filter?(name: string): Function | undefined
   filter?(name: string, filter: Function): this
 
   /**
    * @internal v3 compat only
+   * @internal 仅 v3 兼容
    */
   _createRoot?(options: ComponentOptions): ComponentPublicInstance
 }
@@ -141,17 +147,21 @@ export interface AppConfig {
   /**
    * Options to pass to `@vue/compiler-dom`.
    * Only supported in runtime compiler build.
+   * 传递给 `@vue/compiler-dom` 的选项。
+   * 仅在运行时编译器构建中支持。
    */
   compilerOptions: RuntimeCompilerOptions
 
   /**
    * @deprecated use config.compilerOptions.isCustomElement
+   * @deprecated 使用 config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
 
   /**
    * TODO document for 3.5
    * Enable warnings for computed getters that recursively trigger itself.
+   * 启用对递归触发自身的 computed getter 的警告。
    */
   warnRecursiveComputed?: boolean
 
@@ -159,11 +169,15 @@ export interface AppConfig {
    * Whether to throw unhandled errors in production.
    * Default is `false` to avoid crashing on any error (and only logs it)
    * But in some cases, e.g. SSR, throwing might be more desirable.
+   * 是否在生产环境中抛出未处理的错误。
+   * 默认为 `false` 以避免因任何错误而崩溃（仅记录它）
+   * 但在某些情况下，例如 SSR，抛出错误可能更可取。
    */
   throwUnhandledErrorInProduction?: boolean
 
   /**
    * Prefix for all useId() calls within this app
+   * 此应用内所有 useId() 调用前缀
    */
   idPrefix?: string
 }
@@ -180,26 +194,32 @@ export interface AppContext {
    * Cache for merged/normalized component options
    * Each app instance has its own cache because app-level global mixins and
    * optionMergeStrategies can affect merge behavior.
+   * 合并/标准化组件选项的缓存
+   * 每个应用实例都有自己的缓存，因为应用级全局 mixin 和 optionMergeStrategies 会影响合并行为。
    * @internal
    */
   optionsCache: WeakMap<ComponentOptions, MergedComponentOptions>
   /**
    * Cache for normalized props options
+   * 标准化 props 选项的缓存
    * @internal
    */
   propsCache: WeakMap<ConcreteComponent, NormalizedPropsOptions>
   /**
    * Cache for normalized emits options
+   * 标准化 emits 选项的缓存
    * @internal
    */
   emitsCache: WeakMap<ConcreteComponent, ObjectEmitsOptions | null>
   /**
    * HMR only
+   * 仅 HMR
    * @internal
    */
   reload?: () => void
   /**
    * v2 compat only
+   * 仅 v2 兼容
    * @internal
    */
   filters?: Record<string, Function>
@@ -372,6 +392,8 @@ export function createAppAPI<HostElement>(
           const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
+          // 将应用上下文存储在根 VNode 上。
+          // 这将在初始挂载时设置在根实例上。
           vnode.appContext = context
 
           if (namespace === true) {
@@ -381,13 +403,16 @@ export function createAppAPI<HostElement>(
           }
 
           // HMR root reload
+          // HMR 根重载
           if (__DEV__) {
             context.reload = () => {
               const cloned = cloneVNode(vnode)
               // avoid hydration for hmr updating
+              // 避免 HMR 更新时的 hydration
               cloned.el = null
               // casting to ElementNamespace because TS doesn't guarantee type narrowing
               // over function boundaries
+              // 转换为 ElementNamespace，因为 TS 不保证跨函数边界的类型收窄
               render(cloned, rootContainer, namespace as ElementNamespace)
             }
           }
@@ -400,6 +425,7 @@ export function createAppAPI<HostElement>(
           isMounted = true
           app._container = rootContainer
           // for devtools and telemetry
+          // 用于 devtools 和遥测
           ;(rootContainer as any).__vue_app__ = app
 
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -455,6 +481,7 @@ export function createAppAPI<HostElement>(
             )
           } else {
             // #13212, context.provides can inherit the provides object from parent on custom elements
+            // #13212, context.provides 可以在自定义元素上继承父级的 provides 对象
             warn(
               `App already provides property with key "${String(key)}" inherited from its parent element. ` +
                 `It will be overwritten with the new value.`,
@@ -489,5 +516,6 @@ export function createAppAPI<HostElement>(
 /**
  * @internal Used to identify the current app when using `inject()` within
  * `app.runWithContext()`.
+ * @internal 用于在使用 `app.runWithContext()` 时识别当前应用，以便使用 `inject()`。
  */
 export let currentApp: App<unknown> | null = null
